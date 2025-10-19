@@ -317,6 +317,78 @@ export class VideoAPI {
   }
 
   /**
+   * Get video processing status
+   */
+  static async getProcessingStatus(videoId: string) {
+    const { data: status, error } = await supabase
+      .from('video_processing_status')
+      .select('*')
+      .eq('video_id', videoId)
+      .single();
+
+    if (error) throw error;
+    return status;
+  }
+
+  /**
+   * Update job progress
+   */
+  static async updateJobProgress(
+    jobId: string,
+    progress: number,
+    message?: string
+  ): Promise<void> {
+    const { error } = await supabase
+      .rpc('update_job_progress', {
+        job_id: jobId,
+        progress_pct: progress,
+        progress_msg: message
+      });
+
+    if (error) throw error;
+  }
+
+  /**
+   * Complete a processing job
+   */
+  static async completeJob(
+    jobId: string,
+    outputPath?: string,
+    errorMessage?: string
+  ): Promise<void> {
+    const { error } = await supabase
+      .rpc('complete_job', {
+        job_id: jobId,
+        output_path: outputPath,
+        error_msg: errorMessage
+      });
+
+    if (error) throw error;
+  }
+
+  /**
+   * Reprocess video (retry failed jobs)
+   */
+  static async reprocessVideo(
+    videoId: string,
+    config: {
+      autoTranscribe: boolean;
+      autoGenerateThumbnails: boolean;
+      priority: number;
+    }
+  ): Promise<void> {
+    // Cancel existing failed jobs
+    await supabase
+      .from('video_processing_jobs')
+      .update({ status: 'cancelled' })
+      .eq('video_id', videoId)
+      .eq('status', 'failed');
+
+    // Start new processing jobs
+    await this.startProcessingJobs(videoId, config);
+  }
+
+  /**
    * Get video statistics
    */
   static async getVideoStats(): Promise<VideoStats> {
@@ -472,7 +544,7 @@ export class VideoAPI {
   }
 
   /**
-   * Upload file in chunks
+   * Upload file in chunks with resumable support
    */
   private static async uploadFileInChunks(
     file: File,
@@ -483,6 +555,25 @@ export class VideoAPI {
     const totalChunks = Math.ceil(file.size / chunkSize);
     let uploadedBytes = 0;
 
+    // Create upload session
+    const sessionId = `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    const { error: sessionError } = await supabase
+      .from('video_upload_sessions')
+      .insert({
+        video_id: videoId,
+        session_id: sessionId,
+        total_size: file.size,
+        chunk_size: chunkSize,
+        total_chunks: totalChunks,
+        original_filename: file.name,
+        mime_type: file.type,
+        expires_at: expiresAt.toISOString()
+      });
+
+    if (sessionError) throw sessionError;
+
     for (let i = 0; i < totalChunks; i++) {
       const start = i * chunkSize;
       const end = Math.min(start + chunkSize, file.size);
@@ -491,7 +582,7 @@ export class VideoAPI {
       // Upload chunk to Supabase Storage
       const { error } = await supabase.storage
         .from('videos')
-        .upload(`${videoId}/chunk_${i}`, chunk, {
+        .upload(`${sessionId}/chunk_${i}`, chunk, {
           contentType: file.type,
           upsert: true
         });
@@ -508,9 +599,28 @@ export class VideoAPI {
         uploaded_bytes: uploadedBytes,
         total_bytes: file.size
       });
+
+      // Update session progress
+      await supabase
+        .from('video_upload_sessions')
+        .update({
+          uploaded_chunks: i + 1,
+          uploaded_bytes: uploadedBytes,
+          last_activity: new Date().toISOString()
+        })
+        .eq('session_id', sessionId);
     }
 
-    // Combine chunks into final video file
+    // Mark upload as complete
+    await supabase
+      .from('video_upload_sessions')
+      .update({
+        is_complete: true,
+        last_activity: new Date().toISOString()
+      })
+      .eq('session_id', sessionId);
+
+    // Upload final video file
     const { data: finalVideo, error: combineError } = await supabase
       .storage
       .from('videos')
@@ -547,7 +657,10 @@ export class VideoAPI {
         priority: config.priority,
         config: {
           quality: 'high',
-          format: 'hls'
+          format: 'hls',
+          generate_mp4: true,
+          generate_webm: true,
+          resolutions: ['720p', '1080p']
         }
       }
     ];
@@ -559,7 +672,10 @@ export class VideoAPI {
         priority: config.priority,
         config: {
           quality: 'medium',
-          format: 'jpeg'
+          format: 'jpeg',
+          count: 5,
+          generate_poster: true,
+          time_offsets: [0.1, 0.25, 0.5, 0.75, 0.9] // Generate at 10%, 25%, 50%, 75%, 90% of video
         }
       });
     }
@@ -571,16 +687,41 @@ export class VideoAPI {
         priority: config.priority,
         config: {
           language: 'en',
-          confidence_threshold: 0.8
+          confidence_threshold: 0.8,
+          generate_chapters: true,
+          speaker_detection: true
         }
       });
     }
+
+    // Add analysis job for metadata extraction
+    jobs.push({
+      video_id: videoId,
+      job_type: 'analyze' as const,
+      priority: config.priority,
+      config: {
+        detect_scenes: true,
+        extract_metadata: true,
+        generate_tags: true,
+        detect_objects: true,
+        detect_faces: true
+      }
+    });
 
     const { error } = await supabase
       .from('video_processing_jobs')
       .insert(jobs);
 
     if (error) throw error;
+
+    // Update video status to processing
+    await supabase
+      .from('videos')
+      .update({
+        processing_status: 'processing',
+        processing_progress: 0
+      })
+      .eq('id', videoId);
   }
 }
 

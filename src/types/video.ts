@@ -18,7 +18,7 @@ export type VideoVisibility = 'private' | 'public' | 'organization';
 export type SkillLevel = 'beginner' | 'intermediate' | 'advanced';
 
 // Video processing job types
-export type ProcessingJobType = 'transcode' | 'transcribe' | 'thumbnail' | 'analyze';
+export type ProcessingJobType = 'transcode' | 'transcribe' | 'thumbnail' | 'analyze' | 'poster';
 
 // Video processing job status
 export type ProcessingJobStatus = 'queued' | 'processing' | 'completed' | 'failed' | 'cancelled';
@@ -105,14 +105,35 @@ export interface VideoProcessingJob {
   video_id: string;
   job_type: ProcessingJobType;
   status: ProcessingJobStatus;
+  priority: number;
   worker_id: string | null;
   started_at: string | null;
   completed_at: string | null;
   error_message: string | null;
+  retry_count: number;
+  max_retries: number;
   config: Record<string, any>;
-  priority: number;
+  input_path: string | null;
+  output_path: string | null;
+  progress_percentage: number;
+  progress_message: string | null;
   created_at: string;
   updated_at: string;
+}
+
+// Video processing status details
+export interface VideoProcessingStatusDetails {
+  video_id: string;
+  title: string;
+  processing_status: string;
+  processing_progress: number;
+  processing_error: string | null;
+  total_jobs: number;
+  completed_jobs: number;
+  failed_jobs: number;
+  processing_jobs: number;
+  queued_jobs: number;
+  last_job_update: string | null;
 }
 
 // Video creation input
