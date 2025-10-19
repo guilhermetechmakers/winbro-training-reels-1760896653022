@@ -7,6 +7,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import LandingPage from "@/pages/LandingPage";
 import LoginPage from "@/pages/LoginPage";
 import SignupPage from "@/pages/SignupPage";
+import PasswordResetPage from "@/pages/PasswordResetPage";
 import EmailVerification from "@/pages/auth/EmailVerification";
 import Dashboard from "@/pages/Dashboard";
 import ContentLibrary from "@/pages/ContentLibrary";
@@ -56,6 +57,14 @@ export default function App() {
               element={
                 <ProtectedRoute requireAuth={false}>
                   <SignupPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/reset-password" 
+              element={
+                <ProtectedRoute requireAuth={false}>
+                  <PasswordResetPage />
                 </ProtectedRoute>
               } 
             />

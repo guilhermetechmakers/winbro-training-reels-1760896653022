@@ -260,3 +260,6 @@ export interface DemoRequestForm {
 
 // Re-export video types
 export * from './video';
+
+// Re-export auth types
+export * from './auth';
