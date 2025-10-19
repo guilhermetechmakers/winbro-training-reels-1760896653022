@@ -293,3 +293,5 @@ export * from './auth';
 
 // Re-export quiz types
 export * from './quiz';
+// Search types
+export * from './search';
