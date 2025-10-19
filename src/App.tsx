@@ -14,6 +14,9 @@ import ContentLibrary from "@/pages/ContentLibrary";
 import VideoPlayer from "@/pages/VideoPlayer";
 import CourseBuilder from "@/pages/CourseBuilder";
 import CoursePlayer from "@/pages/CoursePlayer";
+import { QuizPlayerPage } from "@/pages/QuizPlayerPage";
+import { QuizBuilderPage } from "@/pages/QuizBuilderPage";
+import { QuizResultsPage } from "@/pages/QuizResultsPage";
 import AdminDashboard from "@/pages/AdminDashboard";
 import UserManagement from "@/pages/UserManagement";
 import UserProfile from "@/components/UserProfile";
@@ -127,6 +130,38 @@ export default function App() {
                   <MainLayout>
                     <CoursePlayer />
                   </MainLayout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/course/:courseId/quiz/:quizId" 
+              element={
+                <ProtectedRoute>
+                  <QuizPlayerPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/course/:courseId/quiz/:quizId/results" 
+              element={
+                <ProtectedRoute>
+                  <QuizResultsPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/course/:courseId/builder/quiz" 
+              element={
+                <ProtectedRoute>
+                  <QuizBuilderPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/course/:courseId/builder/quiz/:quizId" 
+              element={
+                <ProtectedRoute>
+                  <QuizBuilderPage />
                 </ProtectedRoute>
               } 
             />

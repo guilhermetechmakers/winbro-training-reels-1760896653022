@@ -290,3 +290,6 @@ export * from './video';
 
 // Re-export auth types
 export * from './auth';
+
+// Re-export quiz types
+export * from './quiz';

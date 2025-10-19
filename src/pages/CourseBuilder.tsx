@@ -14,17 +14,20 @@ import {
   Users, 
   BookOpen, 
   Video,
-  AlertCircle
+  AlertCircle,
+  HelpCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useCourses, useCreateCourse, useUpdateCourse } from '@/hooks/useCourses';
 import { useReels } from '@/hooks/useReels';
+import { useCreateQuiz } from '@/hooks/useQuiz';
 import type { Course, CourseModule, Reel, CreateCourseInput, CourseBuilderState } from '@/types';
+import type { CourseQuiz, QuizQuestionForm } from '@/types/quiz';
 import { toast } from 'sonner';
 import CourseMetadataForm from '@/components/course-builder/CourseMetadataForm';
 import DragDropTimeline from '@/components/course-builder/DragDropTimeline';
-import QuizBuilderComponent from '@/components/course-builder/QuizBuilder';
 import PublishControlsComponent from '@/components/course-builder/PublishControls';
+import { QuizCard } from '@/components/quiz/QuizCard';
 
 
 // Reel Library Component
@@ -240,6 +243,38 @@ export default function CourseBuilder() {
     });
   }, [handleAddModule, courseBuilderState.modules.length]);
 
+  // Add quiz to course
+  const handleAddQuiz = useCallback((quiz: CourseQuiz) => {
+    handleAddModule({
+      title: quiz.question,
+      type: 'quiz',
+      content: quiz,
+      order: courseBuilderState.modules.length,
+      estimatedDuration: 300, // 5 minutes default for quiz
+      isRequired: true,
+      unlockAfterPrevious: true,
+      contentId: quiz.id,
+      contentData: {},
+    });
+  }, [handleAddModule, courseBuilderState.modules.length]);
+
+  // Create new quiz
+  const createQuizMutation = useCreateQuiz();
+  const handleCreateQuiz = useCallback(async (quizData: Omit<CourseQuiz, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      const newQuiz = await createQuizMutation.mutateAsync({
+        ...quizData,
+        courseId: selectedCourse?.id || '',
+      });
+      
+      handleAddQuiz(newQuiz);
+      toast.success('Quiz added to course');
+    } catch (error) {
+      toast.error('Failed to create quiz');
+      console.error('Error creating quiz:', error);
+    }
+  }, [createQuizMutation, handleAddQuiz, selectedCourse]);
+
 
   // Save draft
   const handleSaveDraft = useCallback(async () => {
@@ -390,7 +425,11 @@ export default function CourseBuilder() {
               </TabsContent>
               
               <TabsContent value="quizzes" className="space-y-6">
-                <QuizBuilderComponent />
+                <QuizSection 
+                  courseId={selectedCourse?.id || ''}
+                  quizzes={courseBuilderState.modules.filter(m => m.type === 'quiz')}
+                  onCreateQuiz={handleCreateQuiz}
+                />
               </TabsContent>
               
               <TabsContent value="publish" className="space-y-6">
@@ -566,3 +605,248 @@ export default function CourseBuilder() {
     </div>
   );
 }
+
+// Quiz Section Component
+const QuizSection = ({ 
+  courseId, 
+  quizzes, 
+  onCreateQuiz 
+}: { 
+  courseId: string; 
+  quizzes: CourseModule[]; 
+  onCreateQuiz: (quiz: Omit<CourseQuiz, 'id' | 'createdAt' | 'updatedAt'>) => void;
+}) => {
+  const [isCreatingQuiz, setIsCreatingQuiz] = useState(false);
+  const [newQuizData, setNewQuizData] = useState<QuizQuestionForm>({
+    question: '',
+    type: 'multiple-choice',
+    options: ['', '', '', ''],
+    correctAnswer: '',
+    explanation: '',
+    points: 1,
+    timeLimit: undefined
+  });
+
+  const handleCreateQuiz = () => {
+    if (!newQuizData.question.trim()) {
+      toast.error('Please enter a question');
+      return;
+    }
+
+    if (newQuizData.type === 'multiple-choice' && newQuizData.options.filter(o => o.trim()).length < 2) {
+      toast.error('Please provide at least 2 options');
+      return;
+    }
+
+    if (!newQuizData.correctAnswer.trim()) {
+      toast.error('Please provide a correct answer');
+      return;
+    }
+
+    const quizData: Omit<CourseQuiz, 'id' | 'createdAt' | 'updatedAt'> = {
+      courseId,
+      question: newQuizData.question,
+      type: newQuizData.type,
+      options: newQuizData.options.filter(o => o.trim()),
+      correctAnswer: newQuizData.correctAnswer,
+      explanation: newQuizData.explanation,
+      points: newQuizData.points,
+      timeLimit: newQuizData.timeLimit,
+      orderIndex: quizzes.length
+    };
+
+    onCreateQuiz(quizData);
+    setIsCreatingQuiz(false);
+    setNewQuizData({
+      question: '',
+      type: 'multiple-choice',
+      options: ['', '', '', ''],
+      correctAnswer: '',
+      explanation: '',
+      points: 1,
+      timeLimit: undefined
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Quiz List */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <HelpCircle className="h-5 w-5 text-accent-blue" />
+                Course Quizzes
+              </CardTitle>
+              <CardDescription>Add interactive quizzes to test learner comprehension</CardDescription>
+            </div>
+            <Button
+              onClick={() => setIsCreatingQuiz(true)}
+              className="btn-primary"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Quiz
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {quizzes.length > 0 ? (
+            <div className="space-y-4">
+              {quizzes.map((module, _index) => (
+                <QuizCard
+                  key={module.id}
+                  quiz={module.content as CourseQuiz}
+                  onStart={() => {}}
+                  onViewResults={() => {}}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-secondary-text">
+              <HelpCircle className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+              <p className="text-lg font-medium mb-2">No quizzes yet</p>
+              <p className="text-sm">Add quizzes to test learner comprehension</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Create Quiz Form */}
+      {isCreatingQuiz && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Create New Quiz</CardTitle>
+            <CardDescription>Add a quiz question to your course</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Question *</label>
+              <Input
+                value={newQuizData.question}
+                onChange={(e) => setNewQuizData(prev => ({ ...prev, question: e.target.value }))}
+                placeholder="Enter your question here..."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Question Type *</label>
+              <select
+                value={newQuizData.type}
+                onChange={(e) => setNewQuizData(prev => ({ 
+                  ...prev, 
+                  type: e.target.value as any,
+                  options: e.target.value === 'multiple-choice' ? ['', '', '', ''] : [],
+                  correctAnswer: e.target.value === 'true-false' ? 'true' : ''
+                }))}
+                className="w-full p-2 border border-gray-300 rounded-md"
+              >
+                <option value="multiple-choice">Multiple Choice</option>
+                <option value="true-false">True/False</option>
+                <option value="short-answer">Short Answer</option>
+              </select>
+            </div>
+
+            {newQuizData.type === 'multiple-choice' && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Answer Options *</label>
+                {newQuizData.options.map((option, index) => (
+                  <Input
+                    key={index}
+                    value={option}
+                    onChange={(e) => {
+                      const newOptions = [...newQuizData.options];
+                      newOptions[index] = e.target.value;
+                      setNewQuizData(prev => ({ ...prev, options: newOptions }));
+                    }}
+                    placeholder={`Option ${index + 1}`}
+                  />
+                ))}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Correct Answer *</label>
+              {newQuizData.type === 'multiple-choice' ? (
+                <select
+                  value={newQuizData.correctAnswer}
+                  onChange={(e) => setNewQuizData(prev => ({ ...prev, correctAnswer: e.target.value }))}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                >
+                  <option value="">Select correct answer</option>
+                  {newQuizData.options.filter(o => o.trim()).map((option, index) => (
+                    <option key={index} value={option}>{option}</option>
+                  ))}
+                </select>
+              ) : newQuizData.type === 'true-false' ? (
+                <select
+                  value={newQuizData.correctAnswer}
+                  onChange={(e) => setNewQuizData(prev => ({ ...prev, correctAnswer: e.target.value }))}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                >
+                  <option value="true">True</option>
+                  <option value="false">False</option>
+                </select>
+              ) : (
+                <Input
+                  value={newQuizData.correctAnswer}
+                  onChange={(e) => setNewQuizData(prev => ({ ...prev, correctAnswer: e.target.value }))}
+                  placeholder="Enter correct answer..."
+                />
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Explanation (optional)</label>
+              <Input
+                value={newQuizData.explanation}
+                onChange={(e) => setNewQuizData(prev => ({ ...prev, explanation: e.target.value }))}
+                placeholder="Explain why this is the correct answer..."
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Points</label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={newQuizData.points}
+                  onChange={(e) => setNewQuizData(prev => ({ ...prev, points: parseInt(e.target.value) || 1 }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Time Limit (seconds)</label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={newQuizData.timeLimit || ''}
+                  onChange={(e) => setNewQuizData(prev => ({ 
+                    ...prev, 
+                    timeLimit: e.target.value ? parseInt(e.target.value) : undefined 
+                  }))}
+                  placeholder="No limit"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Button
+                onClick={() => setIsCreatingQuiz(false)}
+                variant="outline"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCreateQuiz}
+                className="btn-primary"
+              >
+                Add Quiz
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+};
