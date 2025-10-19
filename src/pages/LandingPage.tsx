@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -273,10 +274,74 @@ export default function LandingPage() {
         {/* Enhanced Animated Background with Modern Design */}
         <div className="absolute inset-0 hero-gradient">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-50/30 via-purple-50/20 to-indigo-50/30"></div>
-          {/* Floating geometric shapes */}
-          <div className="absolute top-20 left-10 w-72 h-72 bg-gradient-to-br from-accent-blue/15 to-blue-600/10 rounded-full blur-3xl animate-float"></div>
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-gradient-to-br from-purple-500/15 to-pink-500/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }}></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gradient-to-br from-green-400/10 to-blue-500/10 rounded-full blur-2xl animate-float" style={{ animationDelay: '4s' }}></div>
+          {/* Floating geometric shapes with enhanced animations */}
+          <motion.div 
+            className="absolute top-20 left-10 w-72 h-72 bg-gradient-to-br from-accent-blue/15 to-blue-600/10 rounded-full blur-3xl"
+            animate={{ 
+              y: [0, -20, 0],
+              x: [0, 10, 0],
+              scale: [1, 1.1, 1]
+            }}
+            transition={{ 
+              duration: 8,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          />
+          <motion.div 
+            className="absolute bottom-20 right-10 w-96 h-96 bg-gradient-to-br from-purple-500/15 to-pink-500/10 rounded-full blur-3xl"
+            animate={{ 
+              y: [0, 20, 0],
+              x: [0, -15, 0],
+              scale: [1, 0.9, 1]
+            }}
+            transition={{ 
+              duration: 10,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: 2
+            }}
+          />
+          <motion.div 
+            className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gradient-to-br from-green-400/10 to-blue-500/10 rounded-full blur-2xl"
+            animate={{ 
+              y: [0, -15, 0],
+              x: [0, 20, 0],
+              scale: [1, 1.05, 1]
+            }}
+            transition={{ 
+              duration: 12,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: 4
+            }}
+          />
+          {/* Additional floating elements for more visual interest */}
+          <motion.div 
+            className="absolute top-32 right-1/4 w-4 h-4 bg-accent-blue/20 rounded-full"
+            animate={{ 
+              y: [0, -30, 0],
+              opacity: [0.3, 0.8, 0.3]
+            }}
+            transition={{ 
+              duration: 6,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          />
+          <motion.div 
+            className="absolute bottom-32 left-1/3 w-6 h-6 bg-purple-500/20 rounded-full"
+            animate={{ 
+              y: [0, 25, 0],
+              opacity: [0.4, 0.9, 0.4]
+            }}
+            transition={{ 
+              duration: 7,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: 1
+            }}
+          />
         </div>
 
         <div className="relative max-w-7xl mx-auto">
