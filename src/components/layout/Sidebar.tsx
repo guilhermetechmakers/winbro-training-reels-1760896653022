@@ -41,6 +41,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
       { name: 'Content Moderation', href: '/admin/content', icon: FileText },
       { name: 'Subscriptions', href: '/admin/subscriptions', icon: DollarSign },
     ] : []),
+    { name: 'Profile', href: '/profile', icon: User },
     { name: 'Settings', href: '/settings', icon: Settings },
   ];
 

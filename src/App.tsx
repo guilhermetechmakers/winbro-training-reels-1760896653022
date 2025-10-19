@@ -16,6 +16,7 @@ import CourseBuilder from "@/pages/CourseBuilder";
 import CoursePlayer from "@/pages/CoursePlayer";
 import AdminDashboard from "@/pages/AdminDashboard";
 import UserManagement from "@/pages/UserManagement";
+import UserProfile from "@/components/UserProfile";
 import UploadReel from "@/pages/UploadReel";
 import EditReel from "@/pages/EditReel";
 import ContentList from "@/pages/ContentList";
@@ -195,6 +196,16 @@ export default function App() {
                 <ProtectedRoute>
                   <MainLayout>
                     <BillingHistory />
+                  </MainLayout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/profile" 
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <UserProfile />
                   </MainLayout>
                 </ProtectedRoute>
               } 
