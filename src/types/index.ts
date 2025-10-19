@@ -56,6 +56,17 @@ export interface Course {
   enrolledUsers: string[];
   createdAt: string;
   updatedAt: string;
+  // Additional course properties
+  difficultyLevel: 'beginner' | 'intermediate' | 'advanced';
+  category?: string;
+  tags: string[];
+  visibility: 'private' | 'public' | 'organization';
+  customerScope: string[];
+  requiresApproval: boolean;
+  allowDownloads: boolean;
+  enableCertificates: boolean;
+  passThreshold: number; // percentage for completion
+  metadata: Record<string, any>;
 }
 
 export interface CourseModule {
@@ -64,6 +75,13 @@ export interface CourseModule {
   type: 'reel' | 'text' | 'quiz';
   content: Reel | TextContent | Quiz;
   order: number;
+  // Additional module properties
+  description?: string;
+  estimatedDuration: number; // in seconds
+  isRequired: boolean;
+  unlockAfterPrevious: boolean;
+  contentId?: string; // references videos.id for reels, course_quizzes.id for quizzes
+  contentData?: Record<string, any>; // for text modules and other content
 }
 
 export interface TextContent {
@@ -77,12 +95,81 @@ export interface Quiz {
   options?: string[];
   correctAnswer: string | string[];
   explanation?: string;
+  // Additional quiz properties
+  points: number;
+  timeLimit?: number; // in seconds, null for no limit
+  courseId: string;
+  moduleId?: string;
 }
 
 export interface CreateCourseInput {
   title: string;
   description: string;
   modules: Omit<CourseModule, 'id'>[];
+  // Additional course creation properties
+  difficultyLevel?: 'beginner' | 'intermediate' | 'advanced';
+  category?: string;
+  tags?: string[];
+  visibility?: 'private' | 'public' | 'organization';
+  customerScope?: string[];
+  requiresApproval?: boolean;
+  allowDownloads?: boolean;
+  enableCertificates?: boolean;
+  passThreshold?: number;
+  metadata?: Record<string, any>;
+}
+
+// Course enrollment and progress types
+export interface CourseEnrollment {
+  id: string;
+  courseId: string;
+  userId: string;
+  enrolledAt: string;
+  completedAt?: string;
+  progressPercentage: number;
+  score?: number;
+  modulesCompleted: string[];
+  lastAccessedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CourseCompletion {
+  id: string;
+  enrollmentId: string;
+  moduleId: string;
+  completedAt: string;
+  score?: number;
+  timeSpent: number; // in seconds
+  attempts: number;
+  createdAt: string;
+}
+
+// Course builder specific types
+export interface CourseBuilderState {
+  course: Partial<Course>;
+  modules: CourseModule[];
+  isDirty: boolean;
+  isSaving: boolean;
+  lastSaved?: string;
+}
+
+export interface DragDropItem {
+  id: string;
+  type: 'reel' | 'text' | 'quiz';
+  title: string;
+  duration?: number;
+  thumbnail?: string;
+}
+
+export interface CoursePreview {
+  course: Course;
+  modules: CourseModule[];
+  totalDuration: number;
+  estimatedTime: string;
+  moduleCount: number;
+  quizCount: number;
+  reelCount: number;
 }
 
 // Analytics types
