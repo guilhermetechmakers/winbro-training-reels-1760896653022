@@ -1,68 +1,148 @@
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+/* Import Inter font */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
+/* Design System with CSS Custom Properties */
+@layer base {
   :root {
-    color: #213547;
-    background-color: #ffffff;
+    /* Winbro Design System Colors - RGB format for Tailwind */
+    --background: 249 250 251; /* #F9FAFB - very light gray, main background */
+    --foreground: 17 24 39; /* #111827 - almost black, used for headings */
+    
+    --primary: 37 99 235; /* #2563EB - accent blue */
+    --primary-foreground: 255 255 255; /* white */
+    
+    --secondary: 107 114 128; /* #6B7280 - medium gray, for subtext and descriptions */
+    --secondary-foreground: 255 255 255; /* white */
+    
+    --card: 255 255 255; /* #FFFFFF - pure white, for cards and sidebar */
+    --card-foreground: 17 24 39; /* #111827 - almost black */
+    
+    --border: 209 213 219; /* #D1D5DB - status gray, dividers */
+    --input: 209 213 219; /* #D1D5DB - input borders */
+    --ring: 37 99 235; /* #2563EB - accent blue for focus rings */
+    
+    --radius: 0.5rem; /* 8px border radius */
   }
-  a:hover {
-    color: #747bff;
+  
+  .dark {
+    /* Dark mode colors if needed in the future */
+    --background: 17 24 39;
+    --foreground: 249 250 251;
+    --card: 31 41 55;
+    --card-foreground: 249 250 251;
+    --border: 55 65 81;
+    --input: 55 65 81;
   }
-  button {
-    background-color: #f9f9f9;
+}
+
+@layer base {
+  * {
+    @apply border-border;
   }
+  
+  body {
+    @apply bg-background text-foreground font-sans;
+    margin: 0;
+    min-height: 100vh;
+  }
+  
+  /* Typography hierarchy based on Design Reference */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold text-primary-text;
+    line-height: 1.2;
+  }
+  
+  h1 {
+    @apply text-4xl lg:text-5xl;
+  }
+  
+  h2 {
+    @apply text-3xl lg:text-4xl;
+  }
+  
+  h3 {
+    @apply text-2xl lg:text-3xl;
+  }
+  
+  h4 {
+    @apply text-xl lg:text-2xl;
+  }
+  
+  h5 {
+    @apply text-lg lg:text-xl;
+  }
+  
+  h6 {
+    @apply text-base lg:text-lg;
+  }
+}
+
+@layer components {
+  /* Card component styles */
+  .card {
+    @apply bg-card text-card-foreground rounded-lg shadow-sm border-0;
+  }
+  
+  .card-hover {
+    @apply transition-all duration-200 hover:shadow-md hover:-translate-y-1;
+  }
+  
+  /* Button component styles */
+  .btn-primary {
+    @apply bg-accent-blue text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:scale-105 hover:shadow-lg active:scale-95 focus:outline-none focus:ring-2 focus:ring-accent-blue focus:ring-offset-2;
+  }
+  
+  .btn-secondary {
+    @apply bg-white text-primary-text border border-border px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:bg-gray-50 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-accent-blue focus:ring-offset-2;
+  }
+  
+  /* Status chips */
+  .status-published {
+    @apply bg-status-green text-white px-3 py-1 rounded-full text-sm font-medium;
+  }
+  
+  .status-archived {
+    @apply bg-status-gray text-gray-700 px-3 py-1 rounded-full text-sm font-medium;
+  }
+  
+  /* Sidebar navigation */
+  .nav-item {
+    @apply flex items-center gap-3 px-3 py-2 rounded-lg text-secondary-text transition-colors duration-200;
+  }
+  
+  .nav-item-active {
+    @apply bg-gray-100 text-primary-text font-medium;
+  }
+  
+  .nav-item:hover {
+    @apply bg-gray-50 text-primary-text;
+  }
+}
+
+/* Smooth Scrolling */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Custom Animations */
+@keyframes accordion-down {
+  from { height: 0; }
+  to { height: var(--radix-accordion-content-height); }
+}
+
+@keyframes accordion-up {
+  from { height: var(--radix-accordion-content-height); }
+  to { height: 0; }
+}
+
+/* Focus Visible for Accessibility */
+:focus-visible {
+  outline: 2px solid rgb(var(--ring));
+  outline-offset: 2px;
 }
