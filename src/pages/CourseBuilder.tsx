@@ -15,7 +15,12 @@ import {
   BookOpen, 
   Video,
   AlertCircle,
-  HelpCircle
+  HelpCircle,
+  Search,
+  MoreVertical,
+  CheckCircle2,
+  XCircle,
+  Pause
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useCourses, useCreateCourse, useUpdateCourse } from '@/hooks/useCourses';
@@ -28,6 +33,7 @@ import CourseMetadataForm from '@/components/course-builder/CourseMetadataForm';
 import DragDropTimeline from '@/components/course-builder/DragDropTimeline';
 import PublishControlsComponent from '@/components/course-builder/PublishControls';
 import { QuizCard } from '@/components/quiz/QuizCard';
+import MainLayout from '@/components/layout/MainLayout';
 
 
 // Reel Library Component
@@ -122,6 +128,8 @@ export default function CourseBuilder() {
   const [searchQuery, setSearchQuery] = useState('');
   const [reelSearchQuery, setReelSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'draft' | 'published' | 'archived'>('all');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'title' | 'duration'>('newest');
 
   // API hooks
   const { data: courses, isLoading: coursesLoading } = useCourses();
@@ -300,11 +308,29 @@ export default function CourseBuilder() {
 
 
 
-  // Filter courses based on search
-  const filteredCourses = courses?.filter(course =>
-    course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    course.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  ) || [];
+  // Filter and sort courses
+  const filteredCourses = courses?.filter(course => {
+    const matchesSearch = course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      course.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      course.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    const matchesStatus = filterStatus === 'all' || course.status === filterStatus;
+    
+    return matchesSearch && matchesStatus;
+  }).sort((a, b) => {
+    switch (sortBy) {
+      case 'newest':
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      case 'oldest':
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      case 'title':
+        return a.title.localeCompare(b.title);
+      case 'duration':
+        return (b.totalDuration || 0) - (a.totalDuration || 0);
+      default:
+        return 0;
+    }
+  }) || [];
 
   if (isPreviewMode && selectedCourse) {
     return (
@@ -363,8 +389,9 @@ export default function CourseBuilder() {
   }
 
   return (
-    <div className="min-h-screen bg-main-bg">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <MainLayout>
+      <div className="min-h-screen bg-main-bg">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
@@ -373,12 +400,6 @@ export default function CourseBuilder() {
               <p className="text-secondary-text">Create structured training courses from reels and resources</p>
             </div>
             <div className="flex items-center space-x-4">
-              <Input
-                placeholder="Search courses..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-64"
-              />
               <Button
                 onClick={() => setIsCreating(true)}
                 className="btn-primary"
@@ -388,6 +409,49 @@ export default function CourseBuilder() {
               </Button>
             </div>
           </div>
+        </div>
+
+        {/* Search and Filter Bar */}
+        <div className="mb-6">
+          <Card className="card">
+            <CardContent className="p-4">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-icon-gray" />
+                    <Input
+                      placeholder="Search courses by title, description, or tags..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value as any)}
+                    className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  >
+                    <option value="all">All Status</option>
+                    <option value="draft">Draft</option>
+                    <option value="published">Published</option>
+                    <option value="archived">Archived</option>
+                  </select>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as any)}
+                    className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  >
+                    <option value="newest">Newest First</option>
+                    <option value="oldest">Oldest First</option>
+                    <option value="title">Title A-Z</option>
+                    <option value="duration">Duration</option>
+                  </select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Course List or Builder */}
@@ -482,18 +546,18 @@ export default function CourseBuilder() {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
-                  whileHover={{ scale: 1.02 }}
+                  whileHover={{ scale: 1.02, y: -4 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <Card className="card hover:shadow-lg transition-shadow cursor-pointer group">
-                    <CardHeader>
+                  <Card className="card hover:shadow-xl transition-all duration-300 cursor-pointer group border-0 shadow-md hover:shadow-2xl">
+                    <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <CardTitle className="text-lg group-hover:text-accent-blue transition-colors">
+                          <CardTitle className="text-lg group-hover:text-accent-blue transition-colors line-clamp-2">
                             {course.title}
                           </CardTitle>
-                          <CardDescription className="mt-1 line-clamp-2">
-                            {course.description || 'No description'}
+                          <CardDescription className="mt-2 line-clamp-2 text-sm">
+                            {course.description || 'No description provided'}
                           </CardDescription>
                         </div>
                         <div className="flex items-center space-x-1 ml-4 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -505,7 +569,7 @@ export default function CourseBuilder() {
                               setSelectedCourse(course);
                               setIsCreating(true);
                             }}
-                            className="h-8 w-8 p-0"
+                            className="h-8 w-8 p-0 hover:bg-gray-100"
                           >
                             <Edit3 className="h-4 w-4" />
                           </Button>
@@ -517,51 +581,83 @@ export default function CourseBuilder() {
                               setSelectedCourse(course);
                               setIsPreviewMode(true);
                             }}
-                            className="h-8 w-8 p-0"
+                            className="h-8 w-8 p-0 hover:bg-gray-100"
                           >
                             <Play className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // Handle more actions
+                            }}
+                            className="h-8 w-8 p-0 hover:bg-gray-100"
+                          >
+                            <MoreVertical className="h-4 w-4" />
                           </Button>
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
+                    <CardContent className="pt-0">
+                      <div className="space-y-4">
                         <div className="flex items-center justify-between">
                           <Badge 
                             variant={course.status === 'published' ? 'default' : 'secondary'}
-                            className={course.status === 'published' ? 'bg-status-green' : ''}
+                            className={`text-xs font-medium ${
+                              course.status === 'published' 
+                                ? 'bg-status-green text-white' 
+                                : course.status === 'draft'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}
                           >
+                            {course.status === 'published' && <CheckCircle2 className="h-3 w-3 mr-1" />}
+                            {course.status === 'draft' && <Pause className="h-3 w-3 mr-1" />}
+                            {course.status === 'archived' && <XCircle className="h-3 w-3 mr-1" />}
                             {course.status}
                           </Badge>
-                          <span className="text-xs text-secondary-text capitalize">
+                          <span className="text-xs text-secondary-text capitalize font-medium">
                             {course.difficultyLevel}
                           </span>
                         </div>
                         
                         <div className="grid grid-cols-2 gap-4 text-sm">
                           <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-secondary-text" />
-                            <span className="text-secondary-text">
-                              {Math.floor(course.totalDuration / 60)}m
+                            <Clock className="h-4 w-4 text-icon-gray" />
+                            <span className="text-secondary-text font-medium">
+                              {Math.floor((course.totalDuration || 0) / 60)}m
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <BookOpen className="h-4 w-4 text-secondary-text" />
-                            <span className="text-secondary-text">
+                            <BookOpen className="h-4 w-4 text-icon-gray" />
+                            <span className="text-secondary-text font-medium">
                               {course.modules?.length || 0} modules
                             </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4 text-icon-gray" />
+                            <span className="text-secondary-text">
+                              {course.enrolledCount || 0} enrolled
+                            </span>
+                          </div>
+                          <div className="text-xs text-secondary-text">
+                            {new Date(course.createdAt).toLocaleDateString()}
                           </div>
                         </div>
                         
                         {course.tags && course.tags.length > 0 && (
                           <div className="flex flex-wrap gap-1">
                             {course.tags.slice(0, 3).map((tag) => (
-                              <Badge key={tag} variant="outline" className="text-xs">
+                              <Badge key={tag} variant="outline" className="text-xs px-2 py-1">
                                 {tag}
                               </Badge>
                             ))}
                             {course.tags.length > 3 && (
-                              <Badge variant="outline" className="text-xs">
+                              <Badge variant="outline" className="text-xs px-2 py-1">
                                 +{course.tags.length - 3} more
                               </Badge>
                             )}
@@ -578,31 +674,63 @@ export default function CourseBuilder() {
 
         {/* Empty State */}
         {!isCreating && filteredCourses.length === 0 && !coursesLoading && (
-          <Card className="card">
-            <CardContent className="text-center py-12">
-              <h3 className="text-lg font-semibold text-primary-text mb-2">
-                {searchQuery ? 'No courses found' : 'No courses yet'}
-              </h3>
-              <p className="text-secondary-text mb-6">
-                {searchQuery 
-                  ? 'Try adjusting your search terms'
-                  : 'Create your first course to get started'
-                }
-              </p>
-              {!searchQuery && (
-                <Button
-                  onClick={() => setIsCreating(true)}
-                  className="btn-primary"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Your First Course
-                </Button>
-              )}
-            </CardContent>
-          </Card>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Card className="card">
+              <CardContent className="text-center py-16">
+                <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+                  <BookOpen className="h-12 w-12 text-icon-gray" />
+                </div>
+                <h3 className="text-xl font-semibold text-primary-text mb-3">
+                  {searchQuery || filterStatus !== 'all' ? 'No courses found' : 'No courses yet'}
+                </h3>
+                <p className="text-secondary-text mb-8 max-w-md mx-auto">
+                  {searchQuery || filterStatus !== 'all'
+                    ? 'Try adjusting your search terms or filters to find what you\'re looking for'
+                    : 'Create your first course to start building structured training content from your reels and resources'
+                  }
+                </p>
+                {!searchQuery && filterStatus === 'all' && (
+                  <Button
+                    onClick={() => setIsCreating(true)}
+                    className="btn-primary"
+                    size="lg"
+                  >
+                    <Plus className="h-5 w-5 mr-2" />
+                    Create Your First Course
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
         )}
+
+        {/* Loading State */}
+        {coursesLoading && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <Card key={i} className="card">
+                <CardContent className="p-6">
+                  <div className="animate-pulse space-y-4">
+                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                    <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                    <div className="flex space-x-2">
+                      <div className="h-6 bg-gray-200 rounded w-16"></div>
+                      <div className="h-6 bg-gray-200 rounded w-20"></div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+        </div>
       </div>
-    </div>
+    </MainLayout>
   );
 }
 
