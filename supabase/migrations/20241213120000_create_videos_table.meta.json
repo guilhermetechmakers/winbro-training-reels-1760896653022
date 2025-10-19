@@ -1,0 +1,12 @@
+{
+  "migration_name": "20241213120000_create_videos_table",
+  "created_at": "2024-12-13T12:00:00Z",
+  "description": "Create videos, video_transcripts, and video_processing_jobs tables for video upload and management functionality",
+  "tables_created": ["videos", "video_transcripts", "video_processing_jobs"],
+  "tables_modified": [],
+  "tables_deleted": [],
+  "breaking_changes": false,
+  "rollback_sql": "DROP TABLE IF EXISTS video_processing_jobs CASCADE; DROP TABLE IF EXISTS video_transcripts CASCADE; DROP TABLE IF EXISTS videos CASCADE;",
+  "estimated_rows": 0,
+  "requires_downtime": false
+}
