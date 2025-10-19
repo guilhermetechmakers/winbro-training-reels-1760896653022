@@ -41,13 +41,18 @@ export const useSignUp = () => {
 
   return useMutation({
     mutationFn: (userData: SignupForm) => 
-      api.post<{ user: User; token: string }>('/auth/signup', userData),
+      api.post<{ user: User; token: string; requiresVerification: boolean }>('/auth/signup', userData),
     onSuccess: (data) => {
       // Store auth token
       localStorage.setItem('auth_token', data.token);
       
       // Update the user in the cache
       queryClient.setQueryData(authKeys.user, data.user);
+      
+      // If email verification is required, redirect to verification page
+      if (data.requiresVerification) {
+        window.location.href = '/verify-email';
+      }
     },
   });
 };

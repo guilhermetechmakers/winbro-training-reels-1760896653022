@@ -1,12 +1,17 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Eye, EyeOff, ArrowLeft, CheckCircle } from 'lucide-react';
+import { useSignUp } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 
 export default function SignupPage() {
+  const navigate = useNavigate();
+  const signUpMutation = useSignUp();
+  
   const [formData, setFormData] = useState({
     company: '',
     fullName: '',
@@ -18,7 +23,6 @@ export default function SignupPage() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
 
   const handlePasswordChange = (password: string) => {
@@ -54,23 +58,31 @@ export default function SignupPage() {
     e.preventDefault();
     
     if (formData.password !== formData.confirmPassword) {
-      alert('Passwords do not match');
+      toast.error('Passwords do not match');
       return;
     }
     
     if (!formData.acceptTOS) {
-      alert('Please accept the Terms of Service');
+      toast.error('Please accept the Terms of Service');
       return;
     }
     
-    setIsLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      // Handle signup logic here
-      console.log('Signup attempt:', formData);
-    }, 1000);
+    try {
+      await signUpMutation.mutateAsync({
+        company: formData.company,
+        fullName: formData.fullName,
+        email: formData.email,
+        password: formData.password,
+        confirmPassword: formData.confirmPassword,
+        acceptTOS: formData.acceptTOS,
+        acceptMarketing: formData.acceptMarketing,
+      });
+      
+      toast.success('Account created successfully! Please check your email for verification.');
+      navigate('/verify-email');
+    } catch (error) {
+      console.error('Signup error:', error);
+    }
   };
 
   const handleSSOSignup = (provider: string) => {
@@ -265,9 +277,9 @@ export default function SignupPage() {
               <Button
                 type="submit"
                 className="w-full btn-primary"
-                disabled={isLoading || !formData.acceptTOS}
+                disabled={signUpMutation.isPending || !formData.acceptTOS}
               >
-                {isLoading ? 'Creating Account...' : 'Create Account'}
+                {signUpMutation.isPending ? 'Creating Account...' : 'Create Account'}
               </Button>
             </form>
 

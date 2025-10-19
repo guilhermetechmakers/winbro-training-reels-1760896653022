@@ -7,6 +7,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import LandingPage from "@/pages/LandingPage";
 import LoginPage from "@/pages/LoginPage";
 import SignupPage from "@/pages/SignupPage";
+import EmailVerification from "@/pages/auth/EmailVerification";
 import Dashboard from "@/pages/Dashboard";
 import ContentLibrary from "@/pages/ContentLibrary";
 import VideoPlayer from "@/pages/VideoPlayer";
@@ -55,6 +56,14 @@ export default function App() {
               element={
                 <ProtectedRoute requireAuth={false}>
                   <SignupPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/verify-email" 
+              element={
+                <ProtectedRoute requireAuth={false}>
+                  <EmailVerification />
                 </ProtectedRoute>
               } 
             />

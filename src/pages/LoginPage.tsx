@@ -107,12 +107,20 @@ export default function LoginPage() {
                     Remember me
                   </label>
                 </div>
-                <Link
-                  to="/forgot-password"
-                  className="text-sm text-accent-blue hover:text-accent-blue/80 transition-colors"
-                >
-                  Forgot password?
-                </Link>
+                <div className="space-y-1">
+                  <Link
+                    to="/forgot-password"
+                    className="text-sm text-accent-blue hover:text-accent-blue/80 transition-colors block"
+                  >
+                    Forgot password?
+                  </Link>
+                  <Link
+                    to="/verify-email"
+                    className="text-sm text-accent-blue hover:text-accent-blue/80 transition-colors block"
+                  >
+                    Verify email address
+                  </Link>
+                </div>
               </div>
 
               <Button

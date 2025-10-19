@@ -51,3 +51,15 @@ export const api = {
   delete: (endpoint: string) => 
     apiRequest(endpoint, { method: 'DELETE' }),
 };
+
+// Email verification API endpoints
+export const emailVerificationApi = {
+  sendVerificationEmail: (email: string) =>
+    api.post<{ success: boolean; message: string }>('/auth/send-verification-email', { email }),
+  
+  verifyEmail: (token: string) =>
+    api.post<{ success: boolean; user: any }>('/auth/verify-email', { token }),
+  
+  checkVerificationStatus: (userId: string) =>
+    api.get<{ emailVerified: boolean }>(`/auth/verification-status/${userId}`),
+};

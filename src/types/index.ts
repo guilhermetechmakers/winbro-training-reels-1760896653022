@@ -6,6 +6,7 @@ export interface User {
   avatarUrl?: string;
   role: 'admin' | 'trainer' | 'learner';
   company: string;
+  emailVerified: boolean;
   createdAt: string;
   updatedAt: string;
 }
