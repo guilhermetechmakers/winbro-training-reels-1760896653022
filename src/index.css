@@ -209,6 +209,31 @@
   .animate-bounce-slow {
     animation: bounce 2s ease-in-out infinite;
   }
+  
+  /* Enhanced animations for landing page */
+  .animate-fade-in-up {
+    animation: fade-in-up 0.8s ease-out forwards;
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  
+  .animate-scale-in {
+    animation: scale-in 0.6s ease-out forwards;
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  
+  .animate-slide-in-left {
+    animation: slide-in-left 0.8s ease-out forwards;
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  
+  .animate-slide-in-right {
+    animation: slide-in-right 0.8s ease-out forwards;
+    opacity: 0;
+    transform: translateX(30px);
+  }
 }
 
 /* Smooth Scrolling */
@@ -258,7 +283,7 @@
 @keyframes fade-in-up {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(30px);
   }
   to {
     opacity: 1;
@@ -266,12 +291,120 @@
   }
 }
 
-.animate-fade-in-up {
-  animation: fade-in-up 0.6s ease-out;
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
-/* Focus Visible for Accessibility */
-:focus-visible {
-  outline: 2px solid rgb(var(--ring));
-  outline-offset: 2px;
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.8s ease-out forwards;
+  opacity: 0;
+  transform: translateY(30px);
+}
+
+.animate-scale-in {
+  animation: scale-in 0.6s ease-out forwards;
+  opacity: 0;
+  transform: scale(0.9);
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.8s ease-out forwards;
+  opacity: 0;
+  transform: translateX(-30px);
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.8s ease-out forwards;
+  opacity: 0;
+  transform: translateX(30px);
+}
+
+  /* Focus Visible for Accessibility */
+  :focus-visible {
+    outline: 2px solid rgb(var(--ring));
+    outline-offset: 2px;
+  }
+  
+  /* Enhanced landing page styles */
+  .hero-section {
+    background: linear-gradient(135deg, rgb(249 250 251) 0%, rgb(243 244 246) 50%, rgb(239 246 255) 100%);
+  }
+  
+  .feature-card-enhanced {
+    @apply bg-white rounded-2xl shadow-lg border border-gray-100 p-8 transition-all duration-500 hover:shadow-2xl hover:shadow-accent-blue/10 hover:-translate-y-2;
+  }
+  
+  .testimonial-card-enhanced {
+    @apply bg-white rounded-2xl shadow-lg border border-gray-100 p-8 transition-all duration-500 hover:shadow-2xl hover:shadow-accent-blue/10 hover:-translate-y-2 relative overflow-hidden;
+  }
+  
+  .pricing-card-enhanced {
+    @apply bg-white rounded-2xl shadow-lg border border-gray-100 p-8 transition-all duration-500 hover:shadow-2xl hover:shadow-accent-blue/10 hover:-translate-y-2 relative overflow-hidden;
+  }
+  
+  /* Gradient text effects */
+  .gradient-text {
+    background: linear-gradient(135deg, rgb(17 24 39) 0%, rgb(37 99 235) 50%, rgb(59 130 246) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  /* Enhanced button styles */
+  .btn-primary-enhanced {
+    @apply bg-gradient-to-r from-accent-blue to-blue-600 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-accent-blue/25 active:scale-95 focus:outline-none focus:ring-4 focus:ring-accent-blue focus:ring-offset-2 relative overflow-hidden;
+  }
+  
+  .btn-primary-enhanced::before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 opacity-0 transition-opacity duration-300;
+  }
+  
+  .btn-primary-enhanced:hover::before {
+    @apply opacity-100;
+  }
+  
+  /* Card hover effects */
+  .card-hover-enhanced {
+    @apply transition-all duration-500 hover:shadow-2xl hover:shadow-accent-blue/10 hover:-translate-y-2 hover:scale-[1.02];
+  }
+  
+  /* Background patterns */
+  .bg-pattern-dots {
+    background-image: radial-gradient(circle, rgb(37 99 235 / 0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+  
+  .bg-pattern-grid {
+    background-image: linear-gradient(rgb(37 99 235 / 0.1) 1px, transparent 1px), linear-gradient(90deg, rgb(37 99 235 / 0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
