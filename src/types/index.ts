@@ -67,6 +67,9 @@ export interface Course {
   enableCertificates: boolean;
   passThreshold: number; // percentage for completion
   metadata: Record<string, any>;
+  // Database fields
+  userId: string;
+  enrolledCount: number;
 }
 
 export interface CourseModule {
@@ -82,6 +85,9 @@ export interface CourseModule {
   unlockAfterPrevious: boolean;
   contentId?: string; // references videos.id for reels, course_quizzes.id for quizzes
   contentData?: Record<string, any>; // for text modules and other content
+  // Database fields
+  courseId: string;
+  orderIndex: number;
 }
 
 export interface TextContent {
@@ -100,12 +106,33 @@ export interface Quiz {
   timeLimit?: number; // in seconds, null for no limit
   courseId: string;
   moduleId?: string;
+  // Database fields
+  orderIndex: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Course Quiz type (for database)
+export interface CourseQuiz {
+  id: string;
+  courseId: string;
+  moduleId?: string;
+  question: string;
+  type: 'multiple-choice' | 'true-false' | 'short-answer';
+  options: string[];
+  correctAnswer: string;
+  explanation?: string;
+  points: number;
+  timeLimit?: number;
+  orderIndex: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CreateCourseInput {
   title: string;
   description: string;
-  modules: Omit<CourseModule, 'id'>[];
+  modules: Omit<CourseModule, 'id' | 'courseId' | 'orderIndex'>[];
   // Additional course creation properties
   difficultyLevel?: 'beginner' | 'intermediate' | 'advanced';
   category?: string;

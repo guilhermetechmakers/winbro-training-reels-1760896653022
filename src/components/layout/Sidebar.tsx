@@ -31,7 +31,8 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   const navigationItems = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'Library', href: '/library', icon: Library },
-    { name: 'My Courses', href: '/courses', icon: BookOpen },
+    { name: 'Course Builder', href: '/course-builder', icon: BookOpen },
+    { name: 'My Courses', href: '/courses', icon: FileText },
     { name: 'Upload', href: '/upload', icon: Upload },
     { name: 'Analytics', href: '/analytics', icon: BarChart3 },
     ...(isAdmin ? [

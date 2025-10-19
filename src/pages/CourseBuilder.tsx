@@ -1,143 +1,133 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Eye, Save, Play, Edit3, Clock, Users, BookOpen } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { 
+  Plus, 
+  Eye, 
+  Save, 
+  Play, 
+  Edit3, 
+  Clock, 
+  Users, 
+  BookOpen, 
+  Video,
+  AlertCircle
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useCourses, useCreateCourse } from '@/hooks/useCourses';
+import { useCourses, useCreateCourse, useUpdateCourse } from '@/hooks/useCourses';
 import { useReels } from '@/hooks/useReels';
-import type { Course, CourseModule, Reel, CreateCourseInput } from '@/types';
+import type { Course, CourseModule, Reel, CreateCourseInput, CourseBuilderState } from '@/types';
 import { toast } from 'sonner';
+import CourseMetadataForm from '@/components/course-builder/CourseMetadataForm';
+import DragDropTimeline from '@/components/course-builder/DragDropTimeline';
+import QuizBuilderComponent from '@/components/course-builder/QuizBuilder';
+import PublishControlsComponent from '@/components/course-builder/PublishControls';
 
-// Placeholder components - these would be implemented as separate components in a real app
-const CourseMetadataForm = ({ course, onUpdate }: { course: Partial<Course>; onUpdate: (updates: Partial<Course>) => void }) => (
-  <Card className="card">
-    <CardHeader>
-      <CardTitle>Course Details</CardTitle>
-      <CardDescription>Basic information about your course</CardDescription>
-    </CardHeader>
-    <CardContent className="space-y-4">
-      <div>
-        <label className="text-sm font-medium">Title</label>
-        <Input
-          value={course.title || ''}
-          onChange={(e) => onUpdate({ title: e.target.value })}
-          placeholder="Enter course title"
-        />
-      </div>
-      <div>
-        <label className="text-sm font-medium">Description</label>
-        <Input
-          value={course.description || ''}
-          onChange={(e) => onUpdate({ description: e.target.value })}
-          placeholder="Enter course description"
-        />
-      </div>
-    </CardContent>
-  </Card>
-);
 
-const ModuleTimeline = ({ 
-  modules, 
-  onRemoveModule
-}: { 
-  modules: CourseModule[]; 
-  onRemoveModule: (id: string) => void; 
-}) => (
-  <Card className="card">
-    <CardHeader>
-      <CardTitle>Course Modules</CardTitle>
-      <CardDescription>Organize your course content</CardDescription>
-    </CardHeader>
-    <CardContent>
-      <div className="space-y-2">
-        {modules.map((module, index) => (
-          <div key={module.id} className="flex items-center p-3 bg-gray-50 rounded-lg">
-            <span className="text-sm font-medium text-gray-500 mr-3">#{index + 1}</span>
-            <div className="flex-1">
-              <h4 className="font-medium">{module.title}</h4>
-              <p className="text-sm text-gray-500 capitalize">{module.type}</p>
-            </div>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => onRemoveModule(module.id)}
-            >
-              Remove
-            </Button>
-          </div>
-        ))}
-        {modules.length === 0 && (
-          <p className="text-center text-gray-500 py-4">No modules added yet</p>
-        )}
-      </div>
-    </CardContent>
-  </Card>
-);
-
+// Reel Library Component
 const ReelLibrary = ({ 
   reels, 
-  onAddReel 
+  onAddReel,
+  searchQuery,
+  onSearchChange
 }: { 
   reels: Reel[]; 
-  onAddReel: (reel: Reel) => void; 
-}) => (
-  <Card className="card">
-    <CardHeader>
-      <CardTitle>Reel Library</CardTitle>
-      <CardDescription>Add reels to your course</CardDescription>
-    </CardHeader>
-    <CardContent>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {reels.map((reel) => (
-          <div key={reel.id} className="border rounded-lg p-4">
-            <h4 className="font-medium">{reel.title}</h4>
-            <p className="text-sm text-gray-500 mb-2">{reel.description}</p>
-            <Button
-              size="sm"
+  onAddReel: (reel: Reel) => void;
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
+}) => {
+  const filteredReels = reels.filter(reel =>
+    reel.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    reel.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    reel.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  return (
+    <Card className="card">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Video className="h-5 w-5 text-accent-blue" />
+          Reel Library
+        </CardTitle>
+        <CardDescription>Add reels to your course from your library</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="mb-4">
+          <Input
+            placeholder="Search reels..."
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="w-full"
+          />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
+          {filteredReels.map((reel) => (
+            <motion.div
+              key={reel.id}
+              whileHover={{ scale: 1.02 }}
+              className="border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
               onClick={() => onAddReel(reel)}
             >
-              Add to Course
-            </Button>
+              <div className="aspect-video bg-gray-100 rounded mb-3 flex items-center justify-center">
+                {reel.thumbnailUrl ? (
+                  <img 
+                    src={reel.thumbnailUrl} 
+                    alt={reel.title}
+                    className="w-full h-full object-cover rounded"
+                  />
+                ) : (
+                  <Video className="h-8 w-8 text-gray-400" />
+                )}
+              </div>
+              <h4 className="font-medium text-sm mb-1 line-clamp-2">{reel.title}</h4>
+              <p className="text-xs text-secondary-text mb-2 line-clamp-2">{reel.description}</p>
+              <div className="flex items-center justify-between text-xs text-secondary-text">
+                <span className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {Math.floor(reel.duration / 60)}m
+                </span>
+                <Badge variant="outline" className="text-xs">
+                  {reel.status}
+                </Badge>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+        {filteredReels.length === 0 && (
+          <div className="text-center py-8 text-secondary-text">
+            <Video className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+            <p className="text-lg font-medium mb-2">No reels found</p>
+            <p className="text-sm">
+              {searchQuery ? 'Try adjusting your search terms' : 'Upload some reels to get started'}
+            </p>
           </div>
-        ))}
-      </div>
-    </CardContent>
-  </Card>
-);
+        )}
+      </CardContent>
+    </Card>
+  );
+};
 
-const QuizBuilder = () => (
-  <Card className="card">
-    <CardHeader>
-      <CardTitle>Quiz Builder</CardTitle>
-      <CardDescription>Add quizzes to your course</CardDescription>
-    </CardHeader>
-    <CardContent>
-      <p className="text-gray-500">Quiz builder functionality would be implemented here</p>
-    </CardContent>
-  </Card>
-);
+
 
 export default function CourseBuilder() {
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [newCourseTitle, setNewCourseTitle] = useState('');
-  const [newCourseDescription, setNewCourseDescription] = useState('');
+  const [reelSearchQuery, setReelSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('overview');
 
   // API hooks
   const { data: courses, isLoading: coursesLoading } = useCourses();
   const { data: reels } = useReels();
   const createCourseMutation = useCreateCourse();
+  const updateCourseMutation = useUpdateCourse();
 
   // Course builder state
-  const [courseBuilderState, setCourseBuilderState] = useState<{
-    course: Partial<Course>;
-    modules: CourseModule[];
-    isDirty: boolean;
-    isSaving: boolean;
-  }>({
+  const [courseBuilderState, setCourseBuilderState] = useState<CourseBuilderState>({
     course: {
       title: '',
       description: '',
@@ -145,41 +135,69 @@ export default function CourseBuilder() {
       visibility: 'private',
       enableCertificates: true,
       passThreshold: 80,
+      tags: [],
+      category: '',
+      requiresApproval: false,
+      allowDownloads: false,
     },
     modules: [],
     isDirty: false,
     isSaving: false,
   });
 
+  // Auto-save functionality
+  useEffect(() => {
+    if (courseBuilderState.isDirty && selectedCourse) {
+      const timeoutId = setTimeout(() => {
+        handleSaveDraft();
+      }, 2000); // Auto-save after 2 seconds of inactivity
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [courseBuilderState.isDirty, selectedCourse]);
+
   // Create new course
   const handleCreateCourse = useCallback(async () => {
-    if (!newCourseTitle.trim()) {
+    if (!courseBuilderState.course.title?.trim()) {
       toast.error('Please enter a course title');
       return;
     }
 
     try {
       const courseData: CreateCourseInput = {
-        title: newCourseTitle,
-        description: newCourseDescription,
-        modules: [],
-        difficultyLevel: 'beginner',
-        visibility: 'private',
-        enableCertificates: true,
-        passThreshold: 80,
+        title: courseBuilderState.course.title,
+        description: courseBuilderState.course.description || '',
+        modules: courseBuilderState.modules.map(module => ({
+          title: module.title,
+          type: module.type,
+          content: module.content,
+          order: module.order,
+          contentId: module.contentId,
+          contentData: module.contentData,
+          estimatedDuration: module.estimatedDuration,
+          isRequired: module.isRequired,
+          unlockAfterPrevious: module.unlockAfterPrevious,
+        })),
+        difficultyLevel: courseBuilderState.course.difficultyLevel || 'beginner',
+        visibility: courseBuilderState.course.visibility || 'private',
+        enableCertificates: courseBuilderState.course.enableCertificates !== false,
+        passThreshold: courseBuilderState.course.passThreshold || 80,
+        tags: courseBuilderState.course.tags || [],
+        category: courseBuilderState.course.category,
+        requiresApproval: courseBuilderState.course.requiresApproval || false,
+        allowDownloads: courseBuilderState.course.allowDownloads || false,
       };
 
       const newCourse = await createCourseMutation.mutateAsync(courseData);
       setSelectedCourse(newCourse);
       setIsCreating(false);
-      setNewCourseTitle('');
-      setNewCourseDescription('');
+      setCourseBuilderState(prev => ({ ...prev, isDirty: false }));
       toast.success('Course created successfully');
     } catch (error) {
       toast.error('Failed to create course');
       console.error('Error creating course:', error);
     }
-  }, [newCourseTitle, newCourseDescription, createCourseMutation]);
+  }, [courseBuilderState, createCourseMutation]);
 
 
   // Update course metadata
@@ -192,10 +210,12 @@ export default function CourseBuilder() {
   }, []);
 
   // Add module to course
-  const handleAddModule = useCallback((module: Omit<CourseModule, 'id'>) => {
+  const handleAddModule = useCallback((module: Omit<CourseModule, 'id' | 'courseId' | 'orderIndex'>) => {
     const newModule: CourseModule = {
       ...module,
       id: `temp-${Date.now()}`,
+      courseId: selectedCourse?.id || '',
+      orderIndex: courseBuilderState.modules.length,
     };
     
     setCourseBuilderState(prev => ({
@@ -203,17 +223,47 @@ export default function CourseBuilder() {
       modules: [...prev.modules, newModule],
       isDirty: true,
     }));
-  }, []);
+  }, [selectedCourse, courseBuilderState.modules.length]);
+
+  // Add reel to course
+  const handleAddReel = useCallback((reel: Reel) => {
+    handleAddModule({
+      title: reel.title,
+      type: 'reel',
+      content: reel,
+      order: courseBuilderState.modules.length,
+      estimatedDuration: reel.duration,
+      isRequired: true,
+      unlockAfterPrevious: true,
+      contentId: reel.id,
+      contentData: {},
+    });
+  }, [handleAddModule, courseBuilderState.modules.length]);
 
 
-  // Remove module from course
-  const handleRemoveModule = useCallback((moduleId: string) => {
-    setCourseBuilderState(prev => ({
-      ...prev,
-      modules: prev.modules.filter(module => module.id !== moduleId),
-      isDirty: true,
-    }));
-  }, []);
+  // Save draft
+  const handleSaveDraft = useCallback(async () => {
+    if (!selectedCourse) return;
+
+    try {
+      await updateCourseMutation.mutateAsync({
+        id: selectedCourse.id,
+        updates: {
+          ...courseBuilderState.course,
+          modules: courseBuilderState.modules,
+        },
+      });
+      
+      setCourseBuilderState(prev => ({ ...prev, isDirty: false, isSaving: false }));
+      toast.success('Draft saved successfully');
+    } catch (error) {
+      toast.error('Failed to save draft');
+      console.error('Error saving draft:', error);
+    }
+  }, [selectedCourse, courseBuilderState, updateCourseMutation]);
+
+
+
 
   // Filter courses based on search
   const filteredCourses = courses?.filter(course =>
@@ -313,58 +363,75 @@ export default function CourseBuilder() {
             exit={{ opacity: 0, y: -20 }}
             className="space-y-6"
           >
-            {/* Course Metadata Form */}
-            <CourseMetadataForm
-              course={courseBuilderState.course}
-              onUpdate={handleUpdateCourseMetadata}
-            />
-
-            {/* Module Timeline */}
-            <ModuleTimeline
-              modules={courseBuilderState.modules}
-              onRemoveModule={handleRemoveModule}
-            />
-
-            {/* Reel Library */}
-            <ReelLibrary
-              reels={reels || []}
-              onAddReel={(reel) => handleAddModule({
-                title: reel.title,
-                type: 'reel',
-                content: reel,
-                order: courseBuilderState.modules.length,
-                estimatedDuration: reel.duration,
-                isRequired: true,
-                unlockAfterPrevious: true,
-              })}
-            />
-
-            {/* Quiz Builder */}
-            <QuizBuilder />
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="content">Content</TabsTrigger>
+                <TabsTrigger value="quizzes">Quizzes</TabsTrigger>
+                <TabsTrigger value="publish">Publish</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="overview" className="space-y-6">
+                <CourseMetadataForm
+                  course={courseBuilderState.course}
+                  onUpdate={handleUpdateCourseMetadata}
+                />
+              </TabsContent>
+              
+              <TabsContent value="content" className="space-y-6">
+                <DragDropTimeline />
+                
+                <ReelLibrary
+                  reels={reels || []}
+                  onAddReel={handleAddReel}
+                  searchQuery={reelSearchQuery}
+                  onSearchChange={setReelSearchQuery}
+                />
+              </TabsContent>
+              
+              <TabsContent value="quizzes" className="space-y-6">
+                <QuizBuilderComponent />
+              </TabsContent>
+              
+              <TabsContent value="publish" className="space-y-6">
+                <PublishControlsComponent />
+              </TabsContent>
+            </Tabs>
 
             {/* Action Buttons */}
-            <div className="flex justify-end space-x-4">
-              <Button
-                variant="outline"
-                onClick={() => setIsCreating(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={() => setIsPreviewMode(true)}
-                variant="outline"
-              >
-                <Eye className="h-4 w-4 mr-2" />
-                Preview
-              </Button>
-              <Button
-                onClick={handleCreateCourse}
-                disabled={createCourseMutation.isPending}
-                className="btn-primary"
-              >
-                <Save className="h-4 w-4 mr-2" />
-                {createCourseMutation.isPending ? 'Creating...' : 'Create Course'}
-              </Button>
+            <div className="flex justify-between items-center pt-6 border-t">
+              <div className="flex items-center gap-2 text-sm text-secondary-text">
+                {courseBuilderState.isDirty && (
+                  <span className="flex items-center gap-1">
+                    <AlertCircle className="h-4 w-4 text-amber-500" />
+                    Unsaved changes
+                  </span>
+                )}
+              </div>
+              
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsCreating(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => setIsPreviewMode(true)}
+                  variant="outline"
+                >
+                  <Eye className="h-4 w-4 mr-2" />
+                  Preview
+                </Button>
+                <Button
+                  onClick={handleCreateCourse}
+                  disabled={createCourseMutation.isPending || !courseBuilderState.course.title}
+                  className="btn-primary"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  {createCourseMutation.isPending ? 'Creating...' : 'Create Course'}
+                </Button>
+              </div>
             </div>
           </motion.div>
         ) : (
@@ -379,30 +446,39 @@ export default function CourseBuilder() {
                   whileHover={{ scale: 1.02 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <Card className="card hover:shadow-lg transition-shadow">
+                  <Card className="card hover:shadow-lg transition-shadow cursor-pointer group">
                     <CardHeader>
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <CardTitle className="text-lg">{course.title}</CardTitle>
-                          <CardDescription className="mt-1">
+                          <CardTitle className="text-lg group-hover:text-accent-blue transition-colors">
+                            {course.title}
+                          </CardTitle>
+                          <CardDescription className="mt-1 line-clamp-2">
                             {course.description || 'No description'}
                           </CardDescription>
                         </div>
-                        <div className="flex items-center space-x-2 ml-4">
+                        <div className="flex items-center space-x-1 ml-4 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => setSelectedCourse(course)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedCourse(course);
+                              setIsCreating(true);
+                            }}
+                            className="h-8 w-8 p-0"
                           >
                             <Edit3 className="h-4 w-4" />
                           </Button>
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setSelectedCourse(course);
                               setIsPreviewMode(true);
                             }}
+                            className="h-8 w-8 p-0"
                           >
                             <Play className="h-4 w-4" />
                           </Button>
@@ -410,31 +486,48 @@ export default function CourseBuilder() {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm text-secondary-text">
-                          <span>Status</span>
-                          <span className={`px-2 py-1 rounded-full text-xs ${
-                            course.status === 'published' 
-                              ? 'bg-status-green text-white' 
-                              : course.status === 'draft'
-                              ? 'bg-gray-200 text-gray-700'
-                              : 'bg-status-gray text-gray-600'
-                          }`}>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Badge 
+                            variant={course.status === 'published' ? 'default' : 'secondary'}
+                            className={course.status === 'published' ? 'bg-status-green' : ''}
+                          >
                             {course.status}
+                          </Badge>
+                          <span className="text-xs text-secondary-text capitalize">
+                            {course.difficultyLevel}
                           </span>
                         </div>
-                        <div className="flex items-center justify-between text-sm text-secondary-text">
-                          <span>Duration</span>
-                          <span>{Math.floor(course.totalDuration / 60)}m</span>
+                        
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-secondary-text" />
+                            <span className="text-secondary-text">
+                              {Math.floor(course.totalDuration / 60)}m
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <BookOpen className="h-4 w-4 text-secondary-text" />
+                            <span className="text-secondary-text">
+                              {course.modules?.length || 0} modules
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex items-center justify-between text-sm text-secondary-text">
-                          <span>Modules</span>
-                          <span>{course.modules?.length || 0}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm text-secondary-text">
-                          <span>Difficulty</span>
-                          <span className="capitalize">{course.difficultyLevel}</span>
-                        </div>
+                        
+                        {course.tags && course.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {course.tags.slice(0, 3).map((tag) => (
+                              <Badge key={tag} variant="outline" className="text-xs">
+                                {tag}
+                              </Badge>
+                            ))}
+                            {course.tags.length > 3 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{course.tags.length - 3} more
+                              </Badge>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>

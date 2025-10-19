@@ -198,3 +198,15 @@ export const useIsAuthenticated = () => {
 export const useAuthStateChange = (callback: (event: string, session: any) => void) => {
   return onAuthStateChange(callback);
 };
+
+// Main auth hook that provides user and auth state
+export const useAuth = () => {
+  const { data: user, isLoading, error } = useCurrentUser();
+  
+  return {
+    user,
+    isLoading,
+    error,
+    isAuthenticated: !!user,
+  };
+};
