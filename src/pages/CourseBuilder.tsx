@@ -124,6 +124,7 @@ const ReelLibrary = ({
 export default function CourseBuilder() {
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [reelSearchQuery, setReelSearchQuery] = useState('');
@@ -236,6 +237,89 @@ export default function CourseBuilder() {
     }));
   }, [selectedCourse, courseBuilderState.modules.length]);
 
+  // Update module
+  const handleUpdateModule = useCallback((moduleId: string, updates: Partial<CourseModule>) => {
+    setCourseBuilderState(prev => ({
+      ...prev,
+      modules: prev.modules.map(module => 
+        module.id === moduleId ? { ...module, ...updates } : module
+      ),
+      isDirty: true,
+    }));
+  }, []);
+
+  // Delete module
+  const handleDeleteModule = useCallback((moduleId: string) => {
+    setCourseBuilderState(prev => ({
+      ...prev,
+      modules: prev.modules.filter(module => module.id !== moduleId),
+      isDirty: true,
+    }));
+  }, []);
+
+  // Reorder modules
+  const handleReorderModules = useCallback((moduleIds: string[]) => {
+    setCourseBuilderState(prev => {
+      const reorderedModules = moduleIds.map(id => 
+        prev.modules.find(module => module.id === id)
+      ).filter(Boolean) as CourseModule[];
+      
+      return {
+        ...prev,
+        modules: reorderedModules,
+        isDirty: true,
+      };
+    });
+  }, []);
+
+  // Publish course
+  const handlePublish = useCallback(async () => {
+    if (!selectedCourse) return;
+    
+    setIsSaving(true);
+    try {
+      await updateCourseMutation.mutateAsync({
+        id: selectedCourse.id,
+        updates: {
+          ...courseBuilderState.course,
+          status: 'published',
+        },
+      });
+      
+      setCourseBuilderState(prev => ({ ...prev, isDirty: false }));
+      toast.success('Course published successfully');
+    } catch (error) {
+      toast.error('Failed to publish course');
+      console.error('Error publishing course:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [selectedCourse, courseBuilderState.course, updateCourseMutation]);
+
+  // Save draft
+  const handleSaveDraft = useCallback(async () => {
+    if (!selectedCourse) return;
+    
+    setIsSaving(true);
+    try {
+      await updateCourseMutation.mutateAsync({
+        id: selectedCourse.id,
+        updates: {
+          ...courseBuilderState.course,
+          status: 'draft',
+        },
+      });
+      
+      setCourseBuilderState(prev => ({ ...prev, isDirty: false }));
+      toast.success('Draft saved successfully');
+    } catch (error) {
+      toast.error('Failed to save draft');
+      console.error('Error saving draft:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [selectedCourse, courseBuilderState.course, updateCourseMutation]);
+
   // Add reel to course
   const handleAddReel = useCallback((reel: Reel) => {
     handleAddModule({
@@ -284,26 +368,6 @@ export default function CourseBuilder() {
   }, [createQuizMutation, handleAddQuiz, selectedCourse]);
 
 
-  // Save draft
-  const handleSaveDraft = useCallback(async () => {
-    if (!selectedCourse) return;
-
-    try {
-      await updateCourseMutation.mutateAsync({
-        id: selectedCourse.id,
-        updates: {
-          ...courseBuilderState.course,
-          modules: courseBuilderState.modules,
-        },
-      });
-      
-      setCourseBuilderState(prev => ({ ...prev, isDirty: false, isSaving: false }));
-      toast.success('Draft saved successfully');
-    } catch (error) {
-      toast.error('Failed to save draft');
-      console.error('Error saving draft:', error);
-    }
-  }, [selectedCourse, courseBuilderState, updateCourseMutation]);
 
 
 
@@ -478,7 +542,15 @@ export default function CourseBuilder() {
               </TabsContent>
               
               <TabsContent value="content" className="space-y-6">
-                <DragDropTimeline />
+                <DragDropTimeline
+                  modules={courseBuilderState.modules}
+                  availableReels={[]}
+                  onAddModule={handleAddModule}
+                  onUpdateModule={handleUpdateModule}
+                  onDeleteModule={handleDeleteModule}
+                  onReorderModules={handleReorderModules}
+                  isPreviewMode={false}
+                />
                 
                 <ReelLibrary
                   reels={reels || []}
@@ -497,7 +569,14 @@ export default function CourseBuilder() {
               </TabsContent>
               
               <TabsContent value="publish" className="space-y-6">
-                <PublishControlsComponent />
+                <PublishControlsComponent
+                  course={courseBuilderState.course}
+                  modules={courseBuilderState.modules}
+                  onPublish={handlePublish}
+                  onSaveDraft={handleSaveDraft}
+                  isPublishing={isSaving}
+                  isSaving={isSaving}
+                />
               </TabsContent>
             </Tabs>
 
