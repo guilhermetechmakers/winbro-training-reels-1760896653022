@@ -99,6 +99,11 @@ export default function PasswordResetPage() {
     try {
       await updatePasswordMutation.mutateAsync(data.password);
       toast.success('Password updated successfully! You can now sign in.');
+      
+      // Log security event for password reset
+      // TODO: Implement security event logging
+      console.log('Password reset completed for user');
+      
       // Redirect to login page
       window.location.href = '/login';
     } catch (error) {

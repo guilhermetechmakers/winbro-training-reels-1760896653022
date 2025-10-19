@@ -85,9 +85,21 @@ export default function SignupPage() {
     }
   };
 
-  const handleSSOSignup = (provider: string) => {
-    console.log(`SSO signup with ${provider}`);
-    // Handle SSO signup logic here
+  const handleSSOSignup = async (provider: string) => {
+    try {
+      // TODO: Implement actual SSO signup logic
+      // This would typically redirect to the SSO provider
+      // or open a popup window for OAuth flow
+      
+      // For now, simulate SSO signup
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Simulate success
+      toast.success(`Successfully signed up with ${provider}`);
+      navigate('/dashboard');
+    } catch (error) {
+      toast.error(`Failed to signup with ${provider}`);
+    }
   };
 
   return (

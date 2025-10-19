@@ -208,5 +208,11 @@ export const useAuth = () => {
     isLoading,
     error,
     isAuthenticated: !!user,
+    // Enhanced authentication features
+    isEmailVerified: user?.email_confirmed_at ? true : false,
+    isProfileComplete: user?.profile?.profile_completed || false,
+    has2FA: user?.profile?.two_factor_enabled || false,
+    lastLogin: user?.last_sign_in_at,
+    createdAt: user?.created_at,
   };
 };

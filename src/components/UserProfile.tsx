@@ -214,6 +214,10 @@ export default function UserProfile() {
       await changePasswordMutation.mutateAsync(data);
       toast.success('Password changed successfully!');
       passwordForm.reset();
+      
+      // Log security event for password change
+      // TODO: Implement security event logging
+      console.log('Password changed for user');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to change password');
     }

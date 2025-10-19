@@ -10,6 +10,7 @@ interface ProtectedRouteProps {
   requireAuth?: boolean;
   requireRole?: string;
   requiredPermission?: string;
+  requireOrganization?: boolean;
   fallback?: React.ReactNode;
 }
 
@@ -18,6 +19,7 @@ export default function ProtectedRoute({
   requireAuth = true,
   requireRole,
   requiredPermission,
+  requireOrganization = false,
   fallback
 }: ProtectedRouteProps) {
   const { user, isLoading, isAuthenticated, hasRole, hasPermission } = useAuth();
@@ -77,6 +79,54 @@ export default function ProtectedRoute({
                 </p>
                 <p className="text-sm text-secondary-text">
                   Your role: <span className="font-medium text-primary-text">{user?.primary_role?.role_name || 'None'}</span>
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button
+                  onClick={() => window.history.back()}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Go Back
+                </Button>
+                <Button
+                  onClick={() => window.location.href = '/dashboard'}
+                  className="flex-1"
+                >
+                  Go to Dashboard
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Check organization-based access
+  if (requireOrganization && !user?.profile?.company) {
+    return fallback || (
+      <div className="min-h-screen bg-main-bg flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="max-w-md w-full"
+        >
+          <Card className="card">
+            <CardHeader className="text-center">
+              <div className="mx-auto w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mb-4">
+                <AlertTriangle className="h-8 w-8 text-yellow-600" />
+              </div>
+              <CardTitle className="text-2xl font-bold text-primary-text">Organization Required</CardTitle>
+              <CardDescription className="text-lg">
+                You need to be part of an organization to access this page.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-center space-y-2">
+                <p className="text-sm text-secondary-text">
+                  Please contact your administrator to be added to an organization.
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-3">

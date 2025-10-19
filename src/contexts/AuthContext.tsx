@@ -9,6 +9,14 @@ interface AuthContextType {
   signOut: () => void;
   hasRole: (roleName: string, scope?: string) => boolean;
   hasPermission: (resource: string, action: string) => boolean;
+  // Enhanced authentication features
+  organization: any | null;
+  refreshUser: () => void;
+  updateUserProfile: (updates: any) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  enable2FA: () => Promise<void>;
+  disable2FA: () => Promise<void>;
+  revokeAllSessions: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -69,6 +77,35 @@ export function AuthProvider({ children }: AuthProviderProps) {
     });
   };
 
+  const refreshUser = () => {
+    refetch();
+  };
+
+  const updateUserProfile = async (updates: any) => {
+    // TODO: Implement user profile update
+    console.log('Update user profile:', updates);
+  };
+
+  const changePassword = async (currentPassword: string, newPassword: string) => {
+    // TODO: Implement password change
+    console.log('Change password:', { currentPassword, newPassword });
+  };
+
+  const enable2FA = async () => {
+    // TODO: Implement 2FA enable
+    console.log('Enable 2FA');
+  };
+
+  const disable2FA = async () => {
+    // TODO: Implement 2FA disable
+    console.log('Disable 2FA');
+  };
+
+  const revokeAllSessions = async () => {
+    // TODO: Implement revoke all sessions
+    console.log('Revoke all sessions');
+  };
+
   const value: AuthContextType = {
     user: user || null,
     isLoading: isLoading || !isInitialized,
@@ -76,6 +113,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     signOut,
     hasRole,
     hasPermission,
+    organization: null, // TODO: Get organization from user context
+    refreshUser,
+    updateUserProfile,
+    changePassword,
+    enable2FA,
+    disable2FA,
+    revokeAllSessions,
   };
 
   return (

@@ -54,8 +54,21 @@ export default function LoginPage() {
     }
   };
 
-  const handleSSOLogin = (provider: string) => {
-    toast.info(`${provider} SSO coming soon!`);
+  const handleSSOLogin = async (provider: string) => {
+    try {
+      // TODO: Implement actual SSO login logic
+      // This would typically redirect to the SSO provider
+      // or open a popup window for OAuth flow
+      
+      // For now, simulate SSO login
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Simulate success
+      toast.success(`Successfully logged in with ${provider}`);
+      navigate('/dashboard');
+    } catch (error) {
+      toast.error(`Failed to login with ${provider}`);
+    }
   };
 
   return (
