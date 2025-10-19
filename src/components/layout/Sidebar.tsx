@@ -11,7 +11,10 @@ import {
   ChevronLeft,
   ChevronRight,
   User,
-  LogOut
+  LogOut,
+  Shield,
+  FileText,
+  DollarSign
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -21,6 +24,9 @@ interface SidebarProps {
 
 export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   const location = useLocation();
+  
+  // For now, we'll assume admin role - this should be connected to actual auth context
+  const isAdmin = true; // TODO: Connect to actual auth context
 
   const navigationItems = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
@@ -28,7 +34,12 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     { name: 'My Courses', href: '/courses', icon: BookOpen },
     { name: 'Upload', href: '/upload', icon: Upload },
     { name: 'Analytics', href: '/analytics', icon: BarChart3 },
-    { name: 'Users', href: '/admin/users', icon: Users },
+    ...(isAdmin ? [
+      { name: 'Admin Dashboard', href: '/admin', icon: Shield },
+      { name: 'User Management', href: '/admin/users', icon: Users },
+      { name: 'Content Moderation', href: '/admin/content', icon: FileText },
+      { name: 'Subscriptions', href: '/admin/subscriptions', icon: DollarSign },
+    ] : []),
     { name: 'Settings', href: '/settings', icon: Settings },
   ];
 
