@@ -31,7 +31,8 @@ import {
   Target,
   BarChart3,
   Globe,
-  ExternalLink
+  ExternalLink,
+  ChevronLeft
 } from 'lucide-react';
 
 export default function LandingPage() {
@@ -45,6 +46,7 @@ export default function LandingPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentTestimonial, setCurrentTestimonial] = useState(0);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -54,9 +56,46 @@ export default function LandingPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Auto-rotate testimonials
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTestimonial((prev) => (prev + 1) % testimonials.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    
+    if (!demoForm.name.trim()) {
+      errors.name = 'Name is required';
+    }
+    
+    if (!demoForm.company.trim()) {
+      errors.company = 'Company is required';
+    }
+    
+    if (!demoForm.email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(demoForm.email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleDemoSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+    
     setIsSubmitting(true);
+    setFormErrors({});
     
     try {
       // Simulate API call
@@ -287,9 +326,15 @@ export default function LandingPage() {
               <a href="#how-it-works" className="text-secondary-text hover:text-accent-blue transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-accent-blue focus:ring-offset-2 rounded-md px-2 py-1">How It Works</a>
               <a href="#pricing" className="text-secondary-text hover:text-accent-blue transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-accent-blue focus:ring-offset-2 rounded-md px-2 py-1">Pricing</a>
               <a href="#testimonials" className="text-secondary-text hover:text-accent-blue transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-accent-blue focus:ring-offset-2 rounded-md px-2 py-1">Testimonials</a>
-              <Button variant="ghost" className="btn-ghost">Help</Button>
-              <Button variant="outline" className="btn-secondary">Login</Button>
-              <Button className="btn-primary">Request Demo</Button>
+              <Button variant="ghost" className="btn-ghost" asChild>
+                <a href="/help">Help</a>
+              </Button>
+              <Button variant="outline" className="btn-secondary" asChild>
+                <a href="/login">Login</a>
+              </Button>
+              <Button className="btn-primary" asChild>
+                <a href="#request-demo">Request Demo</a>
+              </Button>
             </nav>
 
             {/* Mobile Menu Button */}
@@ -305,21 +350,60 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Mobile Navigation */}
-          {isMenuOpen && (
-            <div className="md:hidden bg-white border-t shadow-lg" role="navigation" aria-label="Mobile navigation">
-              <div className="px-2 pt-2 pb-3 space-y-1">
-                <a href="#features" className="block px-3 py-2 text-secondary-text hover:text-accent-blue focus:outline-none focus:ring-2 focus:ring-accent-blue focus:ring-offset-2 rounded-md" onClick={() => setIsMenuOpen(false)}>Features</a>
-                <a href="#how-it-works" className="block px-3 py-2 text-secondary-text hover:text-accent-blue focus:outline-none focus:ring-2 focus:ring-accent-blue focus:ring-offset-2 rounded-md" onClick={() => setIsMenuOpen(false)}>How It Works</a>
-                <a href="#pricing" className="block px-3 py-2 text-secondary-text hover:text-accent-blue focus:outline-none focus:ring-2 focus:ring-accent-blue focus:ring-offset-2 rounded-md" onClick={() => setIsMenuOpen(false)}>Pricing</a>
-                <a href="#testimonials" className="block px-3 py-2 text-secondary-text hover:text-accent-blue focus:outline-none focus:ring-2 focus:ring-accent-blue focus:ring-offset-2 rounded-md" onClick={() => setIsMenuOpen(false)}>Testimonials</a>
-                <div className="pt-4 space-y-2">
-                  <Button variant="outline" className="w-full btn-secondary">Login</Button>
-                  <Button className="w-full btn-primary">Request Demo</Button>
+            {/* Mobile Navigation */}
+            <motion.div
+              className={`md:hidden bg-white border-t shadow-lg transition-all duration-300 ${
+                isMenuOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0 overflow-hidden'
+              }`}
+              role="navigation" 
+              aria-label="Mobile navigation"
+            >
+              <div className="px-4 pt-4 pb-6 space-y-3">
+                <a 
+                  href="#features" 
+                  className="block px-4 py-3 text-secondary-text hover:text-accent-blue hover:bg-accent-blue/5 focus:outline-none focus:ring-2 focus:ring-accent-blue focus:ring-offset-2 rounded-lg transition-all duration-200" 
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Features
+                </a>
+                <a 
+                  href="#how-it-works" 
+                  className="block px-4 py-3 text-secondary-text hover:text-accent-blue hover:bg-accent-blue/5 focus:outline-none focus:ring-2 focus:ring-accent-blue focus:ring-offset-2 rounded-lg transition-all duration-200" 
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  How It Works
+                </a>
+                <a 
+                  href="#pricing" 
+                  className="block px-4 py-3 text-secondary-text hover:text-accent-blue hover:bg-accent-blue/5 focus:outline-none focus:ring-2 focus:ring-accent-blue focus:ring-offset-2 rounded-lg transition-all duration-200" 
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Pricing
+                </a>
+                <a 
+                  href="#testimonials" 
+                  className="block px-4 py-3 text-secondary-text hover:text-accent-blue hover:bg-accent-blue/5 focus:outline-none focus:ring-2 focus:ring-accent-blue focus:ring-offset-2 rounded-lg transition-all duration-200" 
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Testimonials
+                </a>
+                <a 
+                  href="/help" 
+                  className="block px-4 py-3 text-secondary-text hover:text-accent-blue hover:bg-accent-blue/5 focus:outline-none focus:ring-2 focus:ring-accent-blue focus:ring-offset-2 rounded-lg transition-all duration-200" 
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Help
+                </a>
+                <div className="pt-4 space-y-3 border-t border-gray-200">
+                  <Button variant="outline" className="w-full btn-secondary" asChild>
+                    <a href="/login">Login</a>
+                  </Button>
+                  <Button className="w-full btn-primary" asChild>
+                    <a href="#request-demo">Request Demo</a>
+                  </Button>
                 </div>
               </div>
-            </div>
-          )}
+            </motion.div>
         </div>
       </nav>
 
@@ -328,13 +412,18 @@ export default function LandingPage() {
         {/* Enhanced Animated Background with Modern Design */}
         <div className="absolute inset-0">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-50/30 via-purple-50/20 to-indigo-50/30"></div>
+          
+          {/* Animated gradient mesh background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-accent-blue/5 via-purple-500/5 to-pink-500/5"></div>
+          
           {/* Floating geometric shapes with enhanced animations */}
           <motion.div 
             className="absolute top-20 left-10 w-72 h-72 bg-gradient-to-br from-accent-blue/15 to-blue-600/10 rounded-full blur-3xl"
             animate={{ 
               y: [0, -20, 0],
               x: [0, 10, 0],
-              scale: [1, 1.1, 1]
+              scale: [1, 1.1, 1],
+              rotate: [0, 5, 0]
             }}
             transition={{ 
               duration: 8,
@@ -347,7 +436,8 @@ export default function LandingPage() {
             animate={{ 
               y: [0, 20, 0],
               x: [0, -15, 0],
-              scale: [1, 0.9, 1]
+              scale: [1, 0.9, 1],
+              rotate: [0, -5, 0]
             }}
             transition={{ 
               duration: 10,
@@ -361,7 +451,8 @@ export default function LandingPage() {
             animate={{ 
               y: [0, -15, 0],
               x: [0, 20, 0],
-              scale: [1, 1.05, 1]
+              scale: [1, 1.05, 1],
+              rotate: [0, 3, 0]
             }}
             transition={{ 
               duration: 12,
@@ -370,32 +461,31 @@ export default function LandingPage() {
               delay: 4
             }}
           />
-          {/* Additional floating elements for more visual interest */}
-          <motion.div 
-            className="absolute top-32 right-1/4 w-4 h-4 bg-accent-blue/20 rounded-full"
-            animate={{ 
-              y: [0, -30, 0],
-              opacity: [0.3, 0.8, 0.3]
-            }}
-            transition={{ 
-              duration: 6,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          />
-          <motion.div 
-            className="absolute bottom-32 left-1/3 w-6 h-6 bg-purple-500/20 rounded-full"
-            animate={{ 
-              y: [0, 25, 0],
-              opacity: [0.4, 0.9, 0.4]
-            }}
-            transition={{ 
-              duration: 7,
-              repeat: Infinity,
-              ease: "easeInOut",
-              delay: 1
-            }}
-          />
+          
+          {/* Particle system for more visual interest */}
+          {[...Array(12)].map((_, i) => (
+            <motion.div 
+              key={i}
+              className="absolute w-2 h-2 bg-accent-blue/20 rounded-full"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+              }}
+              animate={{ 
+                y: [0, -30, 0],
+                x: [0, Math.random() * 20 - 10, 0],
+                opacity: [0.2, 0.8, 0.2],
+                scale: [0.5, 1, 0.5]
+              }}
+              transition={{ 
+                duration: 4 + Math.random() * 4,
+                repeat: Infinity,
+                ease: "easeInOut",
+                delay: Math.random() * 5
+              }}
+            />
+          ))}
+          
           {/* Additional floating geometric shapes */}
           <motion.div 
             className="absolute top-40 right-20 w-3 h-3 bg-status-green/30 rounded-full"
@@ -423,6 +513,9 @@ export default function LandingPage() {
               delay: 1.5
             }}
           />
+          
+          {/* Animated grid pattern */}
+          <div className="absolute inset-0 bg-pattern-grid opacity-10"></div>
         </div>
 
         <div className="relative max-w-7xl mx-auto">
@@ -437,17 +530,24 @@ export default function LandingPage() {
             {/* Enhanced headline with better typography hierarchy */}
             <motion.h1 
               id="hero-heading" 
-              className="text-5xl lg:text-7xl xl:text-8xl font-bold mb-8 leading-tight"
+              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold mb-6 md:mb-8 leading-tight"
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.1 }}
             >
-              Transform Machine Training with
+              <motion.span
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="block"
+              >
+                Transform Machine Training with
+              </motion.span>
               <motion.span 
-                className="hero-text-gradient block mt-2 bg-gradient-to-r from-accent-blue via-blue-600 to-purple-600 bg-clip-text text-transparent"
+                className="hero-text-gradient block mt-1 md:mt-2 bg-gradient-to-r from-accent-blue via-blue-600 to-purple-600 bg-clip-text text-transparent"
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.8, delay: 0.3 }}
+                transition={{ duration: 0.8, delay: 0.4 }}
               >
                 Ultra-Short Video Reels
               </motion.span>
@@ -455,7 +555,7 @@ export default function LandingPage() {
             
             {/* Enhanced subheadline with better readability */}
             <motion.p 
-              className="text-xl lg:text-2xl xl:text-3xl text-secondary-text mb-12 max-w-5xl mx-auto leading-relaxed font-light"
+              className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-secondary-text mb-8 md:mb-12 max-w-4xl mx-auto leading-relaxed font-light px-4"
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
@@ -466,84 +566,146 @@ export default function LandingPage() {
             
             {/* Enhanced CTA buttons with better micro-interactions */}
             <motion.div 
-              className="flex flex-col sm:flex-row gap-6 justify-center mb-16"
+              className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center mb-12 md:mb-16 px-4"
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.3 }}
             >
               <motion.div
-                whileHover={{ scale: 1.05 }}
+                whileHover={{ scale: 1.05, y: -2 }}
                 whileTap={{ scale: 0.95 }}
+                className="relative w-full sm:w-auto"
               >
                 <Button 
                   size="lg" 
-                  className="btn-primary text-xl px-12 py-6 group relative overflow-hidden" 
+                  className="btn-primary text-lg sm:text-xl px-8 sm:px-12 py-4 sm:py-6 group relative overflow-hidden shadow-xl shadow-accent-blue/25 w-full sm:w-auto" 
                   aria-label="Request a demo of Winbro Training Reels"
                 >
-                  <span className="relative z-10 flex items-center">
+                  <span className="relative z-10 flex items-center justify-center">
                     Request Demo
-                    <ArrowRight className="ml-3 h-6 w-6 group-hover:translate-x-1 transition-transform duration-300" />
+                    <ArrowRight className="ml-2 sm:ml-3 h-5 w-5 sm:h-6 sm:w-6 group-hover:translate-x-1 transition-transform duration-300" />
                   </span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-accent-blue to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  {/* Ripple effect */}
+                  <div className="absolute inset-0 bg-white/20 scale-0 group-hover:scale-100 transition-transform duration-500 rounded-full"></div>
                 </Button>
               </motion.div>
               <motion.div
-                whileHover={{ scale: 1.05 }}
+                whileHover={{ scale: 1.05, y: -2 }}
                 whileTap={{ scale: 0.95 }}
+                className="relative w-full sm:w-auto"
               >
                 <Button 
                   size="lg" 
                   variant="outline" 
-                  className="btn-secondary text-xl px-12 py-6 group hover:shadow-xl hover:shadow-accent-blue/25" 
+                  className="btn-secondary text-lg sm:text-xl px-8 sm:px-12 py-4 sm:py-6 group hover:shadow-xl hover:shadow-accent-blue/25 border-2 hover:border-accent-blue/50 w-full sm:w-auto" 
                   aria-label="Watch the product demo video"
                 >
-                  <Play className="mr-3 h-6 w-6 group-hover:scale-110 transition-transform duration-300" />
+                  <Play className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6 group-hover:scale-110 transition-transform duration-300" />
                   Watch Demo Video
                 </Button>
               </motion.div>
             </motion.div>
 
             {/* Enhanced Hero Video with better visual design */}
-            <div className="relative max-w-5xl mx-auto animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
-              <div className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-3xl overflow-hidden shadow-2xl border border-gray-700/50">
+            <motion.div 
+              className="relative max-w-5xl mx-auto px-4" 
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.5 }}
+            >
+              <div className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-gray-700/50 group">
                 <div className="aspect-video bg-gradient-to-br from-accent-blue/20 via-purple-500/20 to-pink-500/20 flex items-center justify-center relative">
                   {/* Video thumbnail overlay */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
-                  <button 
-                    className="text-center group focus:outline-none focus:ring-4 focus:ring-white/50 rounded-full relative z-10"
+                  
+                  {/* Animated background pattern */}
+                  <div className="absolute inset-0 bg-pattern-dots opacity-10"></div>
+                  
+                  <motion.button 
+                    className="text-center group focus:outline-none focus:ring-4 focus:ring-white/50 rounded-full relative z-10 px-4"
                     aria-label="Play 2-minute product demo video"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                   >
-                    <div className="w-24 h-24 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-6 group-hover:bg-white/30 group-hover:scale-110 transition-all duration-300 border border-white/30">
-                      <Play className="h-10 w-10 text-white ml-1" />
-                    </div>
-                    <p className="text-white/90 text-xl font-medium">Watch 2-minute product demo</p>
-                    <p className="text-white/70 text-sm mt-2">See how it works in action</p>
-                  </button>
+                    <motion.div 
+                      className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6 group-hover:bg-white/30 group-hover:scale-110 transition-all duration-300 border border-white/30"
+                      whileHover={{ rotate: 360 }}
+                      transition={{ duration: 0.6 }}
+                    >
+                      <Play className="h-6 w-6 sm:h-8 sm:w-8 md:h-10 md:w-10 text-white ml-1" />
+                    </motion.div>
+                    <p className="text-white/90 text-lg sm:text-xl font-medium">Watch 2-minute product demo</p>
+                    <p className="text-white/70 text-sm mt-1 sm:mt-2">See how it works in action</p>
+                  </motion.button>
                   
                   {/* Floating elements for visual interest */}
-                  <div className="absolute top-4 right-4 w-3 h-3 bg-accent-blue rounded-full animate-pulse"></div>
-                  <div className="absolute bottom-4 left-4 w-2 h-2 bg-purple-400 rounded-full animate-pulse" style={{ animationDelay: '1s' }}></div>
+                  <motion.div 
+                    className="absolute top-4 right-4 w-2 h-2 sm:w-3 sm:h-3 bg-accent-blue rounded-full"
+                    animate={{ 
+                      scale: [1, 1.2, 1],
+                      opacity: [0.5, 1, 0.5]
+                    }}
+                    transition={{ 
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                  />
+                  <motion.div 
+                    className="absolute bottom-4 left-4 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-purple-400 rounded-full"
+                    animate={{ 
+                      scale: [1, 1.3, 1],
+                      opacity: [0.3, 0.8, 0.3]
+                    }}
+                    transition={{ 
+                      duration: 2.5,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                      delay: 1
+                    }}
+                  />
+                  
+                  {/* Additional floating elements */}
+                  <motion.div 
+                    className="absolute top-1/4 left-1/4 w-1 h-1 bg-status-green rounded-full"
+                    animate={{ 
+                      y: [0, -10, 0],
+                      opacity: [0.4, 0.9, 0.4]
+                    }}
+                    transition={{ 
+                      duration: 3,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                      delay: 0.5
+                    }}
+                  />
                 </div>
               </div>
               
               {/* Video stats overlay */}
-              <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 bg-white rounded-2xl shadow-xl border border-gray-200 px-6 py-4 flex items-center space-x-8">
+              <motion.div 
+                className="absolute -bottom-4 sm:-bottom-6 left-1/2 transform -translate-x-1/2 bg-white rounded-xl sm:rounded-2xl shadow-xl border border-gray-200 px-4 sm:px-6 py-3 sm:py-4 flex items-center space-x-4 sm:space-x-8"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.8 }}
+              >
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-primary-text">20-30s</div>
-                  <div className="text-sm text-secondary-text">Video Length</div>
+                  <div className="text-lg sm:text-xl md:text-2xl font-bold text-primary-text">20-30s</div>
+                  <div className="text-xs sm:text-sm text-secondary-text">Video Length</div>
                 </div>
-                <div className="w-px h-8 bg-gray-200"></div>
+                <div className="w-px h-6 sm:h-8 bg-gray-200"></div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-primary-text">500+</div>
-                  <div className="text-sm text-secondary-text">Companies</div>
+                  <div className="text-lg sm:text-xl md:text-2xl font-bold text-primary-text">500+</div>
+                  <div className="text-xs sm:text-sm text-secondary-text">Companies</div>
                 </div>
-                <div className="w-px h-8 bg-gray-200"></div>
+                <div className="w-px h-6 sm:h-8 bg-gray-200"></div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-primary-text">70%</div>
-                  <div className="text-sm text-secondary-text">Time Saved</div>
+                  <div className="text-lg sm:text-xl md:text-2xl font-bold text-primary-text">70%</div>
+                  <div className="text-xs sm:text-sm text-secondary-text">Time Saved</div>
                 </div>
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
           </div>
         </div>
       </section>
@@ -574,14 +736,17 @@ export default function LandingPage() {
                 viewport={{ once: true }}
                 className="group"
               >
-                <Card className="feature-card group hover:shadow-2xl hover:shadow-accent-blue/10 transition-all duration-500 hover:-translate-y-2 relative overflow-hidden h-full">
+                <Card className="feature-card group hover:shadow-2xl hover:shadow-accent-blue/10 transition-all duration-500 hover:-translate-y-2 relative overflow-hidden h-full border-0 shadow-lg">
                   {/* Gradient overlay on hover */}
                   <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-500`}></div>
                   
+                  {/* Animated border */}
+                  <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-accent-blue/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm"></div>
+                  
                   {/* Feature icon with enhanced design */}
-                  <div className="relative z-10">
+                  <div className="relative z-10 p-8">
                     <motion.div 
-                      className="feature-icon group-hover:scale-110 group-hover:rotate-3 transition-all duration-500"
+                      className="feature-icon group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 mb-6"
                       whileHover={{ scale: 1.1, rotate: 3 }}
                     >
                       {feature.icon}
@@ -589,20 +754,30 @@ export default function LandingPage() {
                     
                     {/* Stats badge */}
                     <motion.div 
-                      className="absolute -top-2 -right-2 bg-gradient-to-r from-accent-blue to-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full"
+                      className="absolute top-4 right-4 bg-gradient-to-r from-accent-blue to-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg"
                       whileHover={{ scale: 1.05 }}
                     >
                       {feature.stats}
                     </motion.div>
                     
+                    {/* Highlight badge */}
+                    {feature.highlight && (
+                      <motion.div 
+                        className="absolute top-4 left-4 bg-gradient-to-r from-status-green to-green-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg"
+                        whileHover={{ scale: 1.05 }}
+                      >
+                        {feature.highlight}
+                      </motion.div>
+                    )}
+                    
                     <CardHeader className="pb-4">
-                      <CardTitle className="text-2xl text-center group-hover:text-accent-blue transition-colors duration-300">
+                      <CardTitle className="text-2xl text-center group-hover:text-accent-blue transition-colors duration-300 mb-4">
                         {feature.title}
                       </CardTitle>
                     </CardHeader>
                     
                     <CardContent className="pt-0">
-                      <CardDescription className="text-base text-center mb-6 leading-relaxed">
+                      <CardDescription className="text-base text-center mb-6 leading-relaxed text-secondary-text">
                         {feature.description}
                       </CardDescription>
                       
@@ -1087,75 +1262,121 @@ export default function LandingPage() {
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                viewport={{ once: true }}
-                className="group"
+          {/* Testimonials Carousel */}
+          <div className="relative">
+            <div className="overflow-hidden">
+              <motion.div 
+                className="flex transition-transform duration-500 ease-in-out"
+                animate={{ x: -currentTestimonial * 100 + '%' }}
               >
-                <Card className="testimonial-card group hover:shadow-2xl hover:shadow-accent-blue/10 transition-all duration-500 hover:-translate-y-2 relative overflow-hidden h-full">
-                  {/* Gradient overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-accent-blue/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                  
-                  <CardContent className="p-8 relative z-10">
-                    {/* Rating stars */}
-                    <div className="flex items-center mb-6">
-                      {[...Array(testimonial.rating)].map((_, i) => (
-                        <motion.div
-                          key={i}
-                          initial={{ opacity: 0, scale: 0 }}
-                          whileInView={{ opacity: 1, scale: 1 }}
-                          transition={{ duration: 0.3, delay: i * 0.1 }}
-                          viewport={{ once: true }}
-                        >
-                          <Star className="h-5 w-5 text-yellow-400 fill-current group-hover:scale-110 transition-transform duration-300" />
-                        </motion.div>
-                      ))}
-                    </div>
-                    
-                    {/* Quote icon */}
+                {testimonials.map((testimonial, index) => (
+                  <div key={index} className="w-full flex-shrink-0 px-4">
                     <motion.div
-                      whileHover={{ scale: 1.1, rotate: 5 }}
-                      transition={{ duration: 0.3 }}
+                      initial={{ opacity: 0, y: 30 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.6 }}
+                      viewport={{ once: true }}
+                      className="group max-w-4xl mx-auto"
                     >
-                      <Quote className="h-8 w-8 text-accent-blue mb-6" />
+                      <Card className="testimonial-card group hover:shadow-2xl hover:shadow-accent-blue/10 transition-all duration-500 hover:-translate-y-2 relative overflow-hidden">
+                        {/* Gradient overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-accent-blue/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                        
+                        <CardContent className="p-12 relative z-10 text-center">
+                          {/* Rating stars */}
+                          <div className="flex items-center justify-center mb-8">
+                            {[...Array(testimonial.rating)].map((_, i) => (
+                              <motion.div
+                                key={i}
+                                initial={{ opacity: 0, scale: 0 }}
+                                whileInView={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 0.3, delay: i * 0.1 }}
+                                viewport={{ once: true }}
+                              >
+                                <Star className="h-6 w-6 text-yellow-400 fill-current group-hover:scale-110 transition-transform duration-300 mx-1" />
+                              </motion.div>
+                            ))}
+                          </div>
+                          
+                          {/* Quote icon */}
+                          <motion.div
+                            whileHover={{ scale: 1.1, rotate: 5 }}
+                            transition={{ duration: 0.3 }}
+                            className="mb-8"
+                          >
+                            <Quote className="h-12 w-12 text-accent-blue mx-auto" />
+                          </motion.div>
+                          
+                          {/* Testimonial content */}
+                          <p className="text-2xl text-secondary-text mb-8 italic leading-relaxed group-hover:text-primary-text transition-colors duration-300 max-w-3xl mx-auto">
+                            "{testimonial.content}"
+                          </p>
+                          
+                          {/* Stats badge */}
+                          <motion.div 
+                            className="inline-block bg-gradient-to-r from-accent-blue to-blue-600 text-white text-sm font-bold px-6 py-2 rounded-full mb-8"
+                            whileHover={{ scale: 1.05 }}
+                          >
+                            {testimonial.stats}
+                          </motion.div>
+                          
+                          {/* Author info */}
+                          <div className="flex items-center justify-center">
+                            <motion.div 
+                              className="w-16 h-16 bg-gradient-to-br from-accent-blue to-blue-600 text-white rounded-full flex items-center justify-center font-bold text-xl mr-6 group-hover:scale-110 transition-transform duration-300"
+                              whileHover={{ scale: 1.1 }}
+                            >
+                              {testimonial.avatar}
+                            </motion.div>
+                            <div className="text-left">
+                              <p className="font-semibold text-primary-text text-xl">{testimonial.name}</p>
+                              <p className="text-secondary-text text-lg">{testimonial.role}</p>
+                              <p className="text-accent-blue font-medium text-lg">{testimonial.company}</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
                     </motion.div>
-                    
-                    {/* Testimonial content */}
-                    <p className="text-lg text-secondary-text mb-8 italic leading-relaxed group-hover:text-primary-text transition-colors duration-300">
-                      "{testimonial.content}"
-                    </p>
-                    
-                    {/* Stats badge */}
-                    <motion.div 
-                      className="absolute top-4 right-4 bg-gradient-to-r from-accent-blue to-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full"
-                      whileHover={{ scale: 1.05 }}
-                    >
-                      {testimonial.stats}
-                    </motion.div>
-                    
-                    {/* Author info */}
-                    <div className="flex items-center">
-                      <motion.div 
-                        className="w-14 h-14 bg-gradient-to-br from-accent-blue to-blue-600 text-white rounded-full flex items-center justify-center font-bold text-lg mr-4 group-hover:scale-110 transition-transform duration-300"
-                        whileHover={{ scale: 1.1 }}
-                      >
-                        {testimonial.avatar}
-                      </motion.div>
-                      <div>
-                        <p className="font-semibold text-primary-text text-lg">{testimonial.name}</p>
-                        <p className="text-secondary-text">{testimonial.role}</p>
-                        <p className="text-accent-blue font-medium">{testimonial.company}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                ))}
               </motion.div>
-            ))}
+            </div>
+            
+            {/* Carousel Controls */}
+            <div className="flex justify-center mt-8 space-x-4">
+              {testimonials.map((_, index) => (
+                <motion.button
+                  key={index}
+                  className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                    index === currentTestimonial 
+                      ? 'bg-accent-blue scale-125' 
+                      : 'bg-gray-300 hover:bg-gray-400'
+                  }`}
+                  onClick={() => setCurrentTestimonial(index)}
+                  whileHover={{ scale: 1.2 }}
+                  whileTap={{ scale: 0.9 }}
+                />
+              ))}
+            </div>
+            
+            {/* Navigation Arrows */}
+            <motion.button
+              className="absolute left-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-accent-blue hover:text-white transition-all duration-300"
+              onClick={() => setCurrentTestimonial((prev) => (prev - 1 + testimonials.length) % testimonials.length)}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+            >
+              <ChevronLeft className="h-6 w-6" />
+            </motion.button>
+            
+            <motion.button
+              className="absolute right-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-accent-blue hover:text-white transition-all duration-300"
+              onClick={() => setCurrentTestimonial((prev) => (prev + 1) % testimonials.length)}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+            >
+              <ChevronRight className="h-6 w-6" />
+            </motion.button>
           </div>
         </div>
       </section>
@@ -1421,7 +1642,7 @@ export default function LandingPage() {
       </section>
 
       {/* Request Demo Section */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-accent-blue via-blue-600 to-purple-600 relative overflow-hidden">
+      <section id="request-demo" className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-accent-blue via-blue-600 to-purple-600 relative overflow-hidden">
         {/* Enhanced background with more visual elements */}
         <div className="absolute inset-0 bg-black/10"></div>
         <div className="absolute top-0 left-0 w-full h-full">
@@ -1507,17 +1728,25 @@ export default function LandingPage() {
                       transition={{ duration: 0.5, delay: 0.6 }}
                       viewport={{ once: true }}
                     >
-                      <label htmlFor="demo-name" className="form-label text-left">Full Name</label>
+                      <label htmlFor="demo-name" className="form-label text-left">Full Name *</label>
                       <Input
                         id="demo-name"
-                        className="form-input text-lg py-4"
+                        className={`form-input text-lg py-4 ${formErrors.name ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''}`}
                         placeholder="Enter your full name"
                         value={demoForm.name}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDemoForm({...demoForm, name: e.target.value})}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                          setDemoForm({...demoForm, name: e.target.value});
+                          if (formErrors.name) {
+                            setFormErrors({...formErrors, name: ''});
+                          }
+                        }}
                         required
-                        aria-describedby="demo-name-help"
+                        aria-describedby="demo-name-help demo-name-error"
                       />
                       <div id="demo-name-help" className="sr-only">Enter your full name for the demo request</div>
+                      {formErrors.name && (
+                        <p id="demo-name-error" className="text-red-500 text-sm mt-1">{formErrors.name}</p>
+                      )}
                     </motion.div>
                     <motion.div
                       initial={{ opacity: 0, x: 20 }}
@@ -1525,17 +1754,25 @@ export default function LandingPage() {
                       transition={{ duration: 0.5, delay: 0.7 }}
                       viewport={{ once: true }}
                     >
-                      <label htmlFor="demo-company" className="form-label text-left">Company</label>
+                      <label htmlFor="demo-company" className="form-label text-left">Company *</label>
                       <Input
                         id="demo-company"
-                        className="form-input text-lg py-4"
+                        className={`form-input text-lg py-4 ${formErrors.company ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''}`}
                         placeholder="Enter your company name"
                         value={demoForm.company}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDemoForm({...demoForm, company: e.target.value})}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                          setDemoForm({...demoForm, company: e.target.value});
+                          if (formErrors.company) {
+                            setFormErrors({...formErrors, company: ''});
+                          }
+                        }}
                         required
-                        aria-describedby="demo-company-help"
+                        aria-describedby="demo-company-help demo-company-error"
                       />
                       <div id="demo-company-help" className="sr-only">Enter your company name for the demo request</div>
+                      {formErrors.company && (
+                        <p id="demo-company-error" className="text-red-500 text-sm mt-1">{formErrors.company}</p>
+                      )}
                     </motion.div>
                   </div>
                   <motion.div
@@ -1544,18 +1781,26 @@ export default function LandingPage() {
                     transition={{ duration: 0.5, delay: 0.8 }}
                     viewport={{ once: true }}
                   >
-                    <label htmlFor="demo-email" className="form-label text-left">Email Address</label>
+                    <label htmlFor="demo-email" className="form-label text-left">Email Address *</label>
                     <Input
                       id="demo-email"
                       type="email"
-                      className="form-input text-lg py-4"
+                      className={`form-input text-lg py-4 ${formErrors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''}`}
                       placeholder="Enter your email address"
                       value={demoForm.email}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDemoForm({...demoForm, email: e.target.value})}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        setDemoForm({...demoForm, email: e.target.value});
+                        if (formErrors.email) {
+                          setFormErrors({...formErrors, email: ''});
+                        }
+                      }}
                       required
-                      aria-describedby="demo-email-help"
+                      aria-describedby="demo-email-help demo-email-error"
                     />
                     <div id="demo-email-help" className="sr-only">Enter your email address for the demo request</div>
+                    {formErrors.email && (
+                      <p id="demo-email-error" className="text-red-500 text-sm mt-1">{formErrors.email}</p>
+                    )}
                   </motion.div>
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
