@@ -1,1111 +1,863 @@
-import { useState, useCallback, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { 
-  Plus, 
-  Eye, 
-  Save, 
-  Play, 
-  Edit3, 
-  Clock, 
-  Users, 
-  BookOpen, 
-  AlertCircle,
-  HelpCircle,
-  Search,
-  MoreVertical,
-  CheckCircle2,
-  XCircle,
-  Pause,
-  Loader2
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { useCourses } from '@/hooks/useCourses';
-import { useReels } from '@/hooks/useReels';
-import { useCreateQuiz } from '@/hooks/useQuiz';
-import { CourseManagementService } from '@/services/courseManagementService';
-import type { Course, CourseModule, Reel, CreateCourseInput, CourseBuilderState } from '@/types';
-import type { CourseQuiz, QuizQuestionForm } from '@/types/quiz';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import CourseMetadataForm from '@/components/course-builder/CourseMetadataForm';
-import EnhancedDragDropTimeline from '@/components/course-builder/EnhancedDragDropTimeline';
-import EnhancedReelLibrary from '@/components/course-builder/EnhancedReelLibrary';
-import PublishControlsComponent from '@/components/course-builder/PublishControls';
-import { QuizCard } from '@/components/quiz/QuizCard';
-import MainLayout from '@/components/layout/MainLayout';
+import { 
+  ArrowLeft, 
+  Save, 
+  Eye, 
+  Send, 
+  FileText, 
+  Video, 
+  HelpCircle,
+  CheckCircle,
+  Clock,
+  ChevronRight
+} from 'lucide-react';
 
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
+import { Slider } from '@/components/ui/slider';
 
-// Get added reel IDs for the enhanced library
-const getAddedReelIds = (modules: CourseModule[]): string[] => {
-  return modules
-    .filter(module => module.type === 'reel' && module.contentId)
-    .map(module => module.contentId!)
-    .filter(Boolean);
+import { CourseManagementService } from '@/services/courseManagementService';
+import type { 
+  Course, 
+  CourseModule, 
+  CourseQuiz 
+} from '@/types';
+import type {
+  CourseBuilderStep,
+  CourseMetadataForm,
+  PublishSettings,
+  CoursePreview,
+  CourseBuilderValidationError
+} from '@/types/courseBuilder';
+
+// Step configuration
+const COURSE_BUILDER_STEPS: CourseBuilderStep[] = [
+  'metadata',
+  'timeline', 
+  'quizzes',
+  'preview',
+  'publish'
+];
+
+const STEP_TITLES = {
+  metadata: 'Course Details',
+  timeline: 'Course Content',
+  quizzes: 'Assessments',
+  preview: 'Preview',
+  publish: 'Publish'
 };
 
-
+const STEP_DESCRIPTIONS = {
+  metadata: 'Set up your course title, description, and basic information',
+  timeline: 'Add and organize your course content including videos and resources',
+  quizzes: 'Create quizzes and assessments to test learner knowledge',
+  preview: 'Review your course before publishing',
+  publish: 'Configure publishing settings and make your course live'
+};
 
 export default function CourseBuilder() {
-  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
-  const [isCreating, setIsCreating] = useState(false);
+  const navigate = useNavigate();
+  const { courseId } = useParams<{ courseId?: string }>();
+  
+  // State management
+  const [currentStep, setCurrentStep] = useState<CourseBuilderStep>('metadata');
+  const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isPreviewMode, setIsPreviewMode] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [reelSearchQuery, setReelSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('overview');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'draft' | 'published' | 'archived'>('all');
-  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'title' | 'duration'>('newest');
+  const [isDirty, setIsDirty] = useState(false);
+  const [lastSaved, setLastSaved] = useState<string | null>(null);
+  const [validationErrors] = useState<CourseBuilderValidationError[]>([]);
 
-  // API hooks
-  const { data: courses, isLoading: coursesLoading } = useCourses();
-  const { data: reels } = useReels();
+  // Course data
+  const [_course, setCourse] = useState<Partial<Course>>({});
+  const [modules, setModules] = useState<CourseModule[]>([]);
+  const [quizzes, setQuizzes] = useState<CourseQuiz[]>([]);
+  const [preview, setPreview] = useState<CoursePreview | null>(null);
 
-  // Course builder state
-  const [courseBuilderState, setCourseBuilderState] = useState<CourseBuilderState>({
-    course: {
-      title: '',
-      description: '',
-      difficultyLevel: 'beginner',
-      visibility: 'private',
-      enableCertificates: true,
-      passThreshold: 80,
-      tags: [],
-      category: '',
-      requiresApproval: false,
-      allowDownloads: false,
-    },
-    modules: [],
-    isDirty: false,
-    isSaving: false,
+  // Form data
+  const [metadata, setMetadata] = useState<CourseMetadataForm>({
+    title: '',
+    description: '',
+    targetRole: '',
+    estimatedTime: 0,
+    prerequisites: [],
+    difficultyLevel: 'beginner',
+    category: '',
+    tags: [],
+    visibility: 'private',
+    customerScope: [],
+    requiresApproval: false,
+    allowDownloads: false,
+    enableCertificates: true,
+    passThreshold: 80,
   });
+
+  const [publishSettings, setPublishSettings] = useState<PublishSettings>({
+    visibility: 'private',
+    customerScope: [],
+    requiresApproval: false,
+    scheduledPublish: undefined,
+    allowDownloads: false,
+    enableCertificates: true,
+    passThreshold: 80,
+    notifyUsers: false,
+    notificationMessage: '',
+  });
+
+  // Load course data on mount
+  useEffect(() => {
+    if (courseId) {
+      loadCourse();
+    }
+  }, [courseId]);
 
   // Auto-save functionality
   useEffect(() => {
-    if (courseBuilderState.isDirty && selectedCourse) {
-      const timeoutId = setTimeout(() => {
-        handleSaveDraft();
-      }, 2000); // Auto-save after 2 seconds of inactivity
+    if (isDirty && !isSaving) {
+      const autoSaveTimer = setTimeout(() => {
+        handleAutoSave();
+      }, 30000); // Auto-save every 30 seconds
 
-      return () => clearTimeout(timeoutId);
+      return () => clearTimeout(autoSaveTimer);
     }
-  }, [courseBuilderState.isDirty, selectedCourse]);
+  }, [isDirty, isSaving]);
 
-  // Load course for editing
-  const handleEditCourse = useCallback(async (course: Course) => {
+  const loadCourse = async () => {
+    if (!courseId) return;
+    
+    setIsLoading(true);
     try {
-      const courseWithDetails = await CourseManagementService.getCourseWithDetails(course.id);
-      if (courseWithDetails) {
-        setSelectedCourse(courseWithDetails);
-        setCourseBuilderState({
-          course: courseWithDetails,
-          modules: courseWithDetails.modules || [],
-          isDirty: false,
-          isSaving: false,
-          lastSaved: new Date().toISOString(),
+      const courseData = await CourseManagementService.getCourseWithDetails(courseId);
+      if (courseData) {
+        setCourse(courseData);
+        setModules(courseData.modules || []);
+        
+        // Load metadata form
+        setMetadata({
+          title: courseData.title || '',
+          description: courseData.description || '',
+          targetRole: courseData.metadata?.targetRole || '',
+          estimatedTime: Math.round((courseData.totalDuration || 0) / 60), // Convert to minutes
+          prerequisites: courseData.metadata?.prerequisites || [],
+          difficultyLevel: courseData.difficultyLevel || 'beginner',
+          category: courseData.category || '',
+          tags: courseData.tags || [],
+          visibility: courseData.visibility || 'private',
+          customerScope: courseData.customerScope || [],
+          requiresApproval: courseData.requiresApproval || false,
+          allowDownloads: courseData.allowDownloads || false,
+          enableCertificates: courseData.enableCertificates !== false,
+          passThreshold: courseData.passThreshold || 80,
         });
-        setIsCreating(true);
-        setActiveTab('overview');
+
+        // Load publish settings
+        setPublishSettings({
+          visibility: courseData.visibility || 'private',
+          customerScope: courseData.customerScope || [],
+          requiresApproval: courseData.requiresApproval || false,
+          allowDownloads: courseData.allowDownloads || false,
+          enableCertificates: courseData.enableCertificates !== false,
+          passThreshold: courseData.passThreshold || 80,
+          notifyUsers: false,
+          notificationMessage: '',
+        });
       }
     } catch (error) {
-      toast.error('Failed to load course for editing');
       console.error('Error loading course:', error);
+      toast.error('Failed to load course');
+    } finally {
+      setIsLoading(false);
     }
-  }, []);
+  };
 
-  // Create new course
-  const handleCreateCourse = useCallback(async () => {
-    if (!courseBuilderState.course.title?.trim()) {
-      toast.error('Please enter a course title');
-      return;
-    }
-
-    try {
-      const courseData: CreateCourseInput = {
-        title: courseBuilderState.course.title,
-        description: courseBuilderState.course.description || '',
-        modules: courseBuilderState.modules.map(module => ({
-          title: module.title,
-          type: module.type,
-          content: module.content,
-          order: module.order,
-          contentId: module.contentId,
-          contentData: module.contentData,
-          estimatedDuration: module.estimatedDuration,
-          isRequired: module.isRequired,
-          unlockAfterPrevious: module.unlockAfterPrevious,
-        })),
-        difficultyLevel: courseBuilderState.course.difficultyLevel || 'beginner',
-        visibility: courseBuilderState.course.visibility || 'private',
-        enableCertificates: courseBuilderState.course.enableCertificates !== false,
-        passThreshold: courseBuilderState.course.passThreshold || 80,
-        tags: courseBuilderState.course.tags || [],
-        category: courseBuilderState.course.category,
-        requiresApproval: courseBuilderState.course.requiresApproval || false,
-        allowDownloads: courseBuilderState.course.allowDownloads || false,
-      };
-
-      const newCourse = await CourseManagementService.createCourse(courseData);
-      setSelectedCourse(newCourse);
-      setIsCreating(false);
-      setCourseBuilderState(prev => ({ ...prev, isDirty: false }));
-      toast.success('Course created successfully');
-    } catch (error) {
-      toast.error('Failed to create course');
-      console.error('Error creating course:', error);
-    }
-  }, [courseBuilderState]);
-
-
-  // Update course metadata
-  const handleUpdateCourseMetadata = useCallback((updates: Partial<Course>) => {
-    setCourseBuilderState(prev => ({
-      ...prev,
-      course: { ...prev.course, ...updates },
-      isDirty: true,
-    }));
-  }, []);
-
-  // Add module to course
-  const handleAddModule = useCallback((module: Omit<CourseModule, 'id' | 'courseId' | 'orderIndex'>) => {
-    const newModule: CourseModule = {
-      ...module,
-      id: `temp-${Date.now()}`,
-      courseId: selectedCourse?.id || '',
-      orderIndex: courseBuilderState.modules.length,
-    };
-    
-    setCourseBuilderState(prev => ({
-      ...prev,
-      modules: [...prev.modules, newModule],
-      isDirty: true,
-    }));
-  }, [selectedCourse, courseBuilderState.modules.length]);
-
-  // Update module
-  const handleUpdateModule = useCallback((moduleId: string, updates: Partial<CourseModule>) => {
-    setCourseBuilderState(prev => ({
-      ...prev,
-      modules: prev.modules.map(module => 
-        module.id === moduleId ? { ...module, ...updates } : module
-      ),
-      isDirty: true,
-    }));
-  }, []);
-
-  // Delete module
-  const handleDeleteModule = useCallback((moduleId: string) => {
-    setCourseBuilderState(prev => ({
-      ...prev,
-      modules: prev.modules.filter(module => module.id !== moduleId),
-      isDirty: true,
-    }));
-  }, []);
-
-  // Reorder modules
-  const handleReorderModules = useCallback((moduleIds: string[]) => {
-    setCourseBuilderState(prev => {
-      const reorderedModules = moduleIds.map(id => 
-        prev.modules.find(module => module.id === id)
-      ).filter(Boolean) as CourseModule[];
-      
-      return {
-        ...prev,
-        modules: reorderedModules,
-        isDirty: true,
-      };
-    });
-  }, []);
-
-  // Publish course
-  const handlePublish = useCallback(async () => {
-    if (!selectedCourse) return;
-    
-    // Validate course before publishing
-    const validation = CourseManagementService.validateCourseForPublishing(selectedCourse);
-    if (!validation.isValid) {
-      toast.error(`Cannot publish course: ${validation.errors.join(', ')}`);
-      return;
-    }
+  const handleAutoSave = async () => {
+    if (!isDirty || isSaving) return;
     
     setIsSaving(true);
     try {
-      const publishedCourse = await CourseManagementService.publishCourse(selectedCourse.id);
-      setSelectedCourse(publishedCourse);
-      setCourseBuilderState(prev => ({ ...prev, isDirty: false }));
-      toast.success('Course published successfully');
+      if (courseId) {
+        await CourseManagementService.updateCourseFromBuilder(courseId, metadata);
+        setLastSaved(new Date().toISOString());
+        setIsDirty(false);
+        toast.success('Course auto-saved');
+      }
     } catch (error) {
-      toast.error('Failed to publish course');
+      console.error('Error auto-saving course:', error);
+      toast.error('Auto-save failed');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      if (courseId) {
+        await CourseManagementService.updateCourseFromBuilder(courseId, metadata);
+      } else {
+        const newCourse = await CourseManagementService.createCourseFromBuilder(metadata);
+        navigate(`/course-builder/${newCourse.id}`, { replace: true });
+      }
+      
+      setLastSaved(new Date().toISOString());
+      setIsDirty(false);
+      toast.success('Course saved successfully');
+    } catch (error) {
+      console.error('Error saving course:', error);
+      toast.error('Failed to save course');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleNextStep = () => {
+    const currentIndex = COURSE_BUILDER_STEPS.indexOf(currentStep);
+    if (currentIndex < COURSE_BUILDER_STEPS.length - 1) {
+      setCurrentStep(COURSE_BUILDER_STEPS[currentIndex + 1]);
+    }
+  };
+
+  const handlePreviousStep = () => {
+    const currentIndex = COURSE_BUILDER_STEPS.indexOf(currentStep);
+    if (currentIndex > 0) {
+      setCurrentStep(COURSE_BUILDER_STEPS[currentIndex - 1]);
+    }
+  };
+
+  const handlePublish = async () => {
+    if (!courseId) return;
+    
+    setIsSaving(true);
+    try {
+      await CourseManagementService.publishCourseWithSettings(courseId, publishSettings);
+      toast.success('Course published successfully!');
+      navigate('/dashboard');
+    } catch (error) {
       console.error('Error publishing course:', error);
+      toast.error('Failed to publish course');
     } finally {
       setIsSaving(false);
     }
-  }, [selectedCourse]);
+  };
 
-  // Save draft
-  const handleSaveDraft = useCallback(async () => {
-    if (!selectedCourse) return;
+  const generatePreview = async () => {
+    if (!courseId) return;
     
-    setIsSaving(true);
     try {
-      await CourseManagementService.updateCourseMetadata(selectedCourse.id, {
-        ...courseBuilderState.course,
-        status: 'draft',
-      });
-      
-      setCourseBuilderState(prev => ({ ...prev, isDirty: false }));
-      toast.success('Draft saved successfully');
+      const previewData = await CourseManagementService.generateCoursePreview(courseId);
+      setPreview(previewData);
     } catch (error) {
-      toast.error('Failed to save draft');
-      console.error('Error saving draft:', error);
-    } finally {
-      setIsSaving(false);
+      console.error('Error generating preview:', error);
+      toast.error('Failed to generate preview');
     }
-  }, [selectedCourse, courseBuilderState.course]);
+  };
 
-  // Add reel to course
-  const handleAddReel = useCallback((reel: Reel) => {
-    handleAddModule({
-      title: reel.title,
-      type: 'reel',
-      content: reel,
-      order: courseBuilderState.modules.length,
-      estimatedDuration: reel.duration,
-      isRequired: true,
-      unlockAfterPrevious: true,
-      contentId: reel.id,
-      contentData: {},
-    });
-  }, [handleAddModule, courseBuilderState.modules.length]);
+  // Validation function (currently unused but kept for future use)
+  // const validateCurrentStep = (): boolean => {
+  //   const errors: CourseBuilderValidationError[] = [];
+  //   
+  //   if (currentStep === 'metadata') {
+  //     if (!metadata.title.trim()) {
+  //       errors.push({
+  //         field: 'title',
+  //         message: 'Course title is required',
+  //         severity: 'error',
+  //         step: 'metadata',
+  //       });
+  //     }
+  //     if (!metadata.description.trim()) {
+  //       errors.push({
+  //         field: 'description',
+  //         message: 'Course description is required',
+  //         severity: 'error',
+  //         step: 'metadata',
+  //       });
+  //     }
+  //   }
+  //   
+  //   setValidationErrors(errors);
+  //   return errors.length === 0;
+  // };
 
-  // Add quiz to course
-  const handleAddQuiz = useCallback((quiz: CourseQuiz) => {
-    handleAddModule({
-      title: quiz.question,
-      type: 'quiz',
-      content: quiz,
-      order: courseBuilderState.modules.length,
-      estimatedDuration: 300, // 5 minutes default for quiz
-      isRequired: true,
-      unlockAfterPrevious: true,
-      contentId: quiz.id,
-      contentData: {},
-    });
-  }, [handleAddModule, courseBuilderState.modules.length]);
+  const currentStepIndex = COURSE_BUILDER_STEPS.indexOf(currentStep);
+  const progress = ((currentStepIndex + 1) / COURSE_BUILDER_STEPS.length) * 100;
 
-  // Create new quiz
-  const createQuizMutation = useCreateQuiz();
-  const handleCreateQuiz = useCallback(async (quizData: Omit<CourseQuiz, 'id' | 'createdAt' | 'updatedAt'>) => {
-    try {
-      const newQuiz = await createQuizMutation.mutateAsync({
-        ...quizData,
-        courseId: selectedCourse?.id || '',
-      });
-      
-      handleAddQuiz(newQuiz);
-      toast.success('Quiz added to course');
-    } catch (error) {
-      toast.error('Failed to create quiz');
-      console.error('Error creating quiz:', error);
-    }
-  }, [createQuizMutation, handleAddQuiz, selectedCourse]);
-
-  // Delete course
-  const handleDeleteCourse = useCallback(async (courseId: string) => {
-    if (!confirm('Are you sure you want to delete this course? This action cannot be undone.')) {
-      return;
-    }
-
-    try {
-      await CourseManagementService.archiveCourse(courseId);
-      toast.success('Course archived successfully');
-      // Refresh courses list
-      window.location.reload();
-    } catch (error) {
-      toast.error('Failed to archive course');
-      console.error('Error archiving course:', error);
-    }
-  }, []);
-
-  // Clone course
-  const handleCloneCourse = useCallback(async (course: Course) => {
-    const newTitle = prompt('Enter a title for the cloned course:', `${course.title} (Copy)`);
-    if (!newTitle) return;
-
-    try {
-      await CourseManagementService.cloneCourse(
-        course.id,
-        newTitle,
-        course.description
-      );
-      toast.success('Course cloned successfully');
-      // Refresh courses list
-      window.location.reload();
-    } catch (error) {
-      toast.error('Failed to clone course');
-      console.error('Error cloning course:', error);
-    }
-  }, []);
-
-
-
-
-
-
-  // Filter and sort courses
-  const filteredCourses = courses?.filter(course => {
-    const matchesSearch = course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      course.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      course.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
-    
-    const matchesStatus = filterStatus === 'all' || course.status === filterStatus;
-    
-    return matchesSearch && matchesStatus;
-  }).sort((a, b) => {
-    switch (sortBy) {
-      case 'newest':
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      case 'oldest':
-        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-      case 'title':
-        return a.title.localeCompare(b.title);
-      case 'duration':
-        return (b.totalDuration || 0) - (a.totalDuration || 0);
-      default:
-        return 0;
-    }
-  }) || [];
-
-  if (isPreviewMode && selectedCourse) {
-    const totalDuration = courseBuilderState.modules.reduce((sum, module) => sum + (module.estimatedDuration || 0), 0);
-    const moduleCount = courseBuilderState.modules.length;
-    const quizCount = courseBuilderState.modules.filter(m => m.type === 'quiz').length;
-    const reelCount = courseBuilderState.modules.filter(m => m.type === 'reel').length;
-
+  if (isLoading) {
     return (
-      <div className="min-h-screen bg-main-bg">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-center justify-between mb-8">
-            <h1 className="text-3xl font-bold text-primary-text">Course Preview</h1>
-            <Button onClick={() => setIsPreviewMode(false)} variant="outline">
-              Back to Builder
-            </Button>
-          </div>
-          <Card className="card">
-            <CardHeader>
-              <CardTitle className="text-2xl">{selectedCourse.title}</CardTitle>
-              <CardDescription className="text-base">{selectedCourse.description}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                    <Clock className="h-5 w-5 mr-2 text-accent-blue" />
-                    <div>
-                      <div className="font-medium">{Math.floor(totalDuration / 60)} minutes</div>
-                      <div className="text-xs text-gray-500">Total Duration</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                    <BookOpen className="h-5 w-5 mr-2 text-accent-blue" />
-                    <div>
-                      <div className="font-medium">{moduleCount} modules</div>
-                      <div className="text-xs text-gray-500">Total Modules</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                    <Play className="h-5 w-5 mr-2 text-accent-blue" />
-                    <div>
-                      <div className="font-medium">{reelCount} videos</div>
-                      <div className="text-xs text-gray-500">Video Reels</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                    <HelpCircle className="h-5 w-5 mr-2 text-accent-blue" />
-                    <div>
-                      <div className="font-medium">{quizCount} quizzes</div>
-                      <div className="text-xs text-gray-500">Assessments</div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="pt-4">
-                  <h3 className="text-lg font-semibold mb-4">Course Modules</h3>
-                  <div className="space-y-3">
-                    {courseBuilderState.modules.map((module, index) => (
-                      <div key={module.id} className="flex items-center p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
-                        <div className="flex items-center justify-center w-8 h-8 bg-accent-blue text-white rounded-full text-sm font-medium mr-4">
-                          {index + 1}
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="font-medium text-primary-text">{module.title}</h4>
-                          <div className="flex items-center gap-4 mt-1">
-                            <Badge variant="outline" className="text-xs">
-                              {module.type}
-                            </Badge>
-                            {module.estimatedDuration > 0 && (
-                              <span className="text-sm text-secondary-text">
-                                {Math.floor(module.estimatedDuration / 60)}m
-                              </span>
-                            )}
-                            {module.isRequired && (
-                              <Badge variant="secondary" className="text-xs">
-                                Required
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {selectedCourse.tags && selectedCourse.tags.length > 0 && (
-                  <div className="pt-4">
-                    <h3 className="text-lg font-semibold mb-3">Tags</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedCourse.tags.map((tag) => (
-                        <Badge key={tag} variant="secondary" className="px-3 py-1">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading course builder...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <MainLayout>
-      <div className="min-h-screen bg-main-bg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-primary-text mb-2">Course Builder</h1>
-              <p className="text-secondary-text">Create structured training courses from reels and resources</p>
-            </div>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
               <Button
-                onClick={() => setIsCreating(true)}
-                className="btn-primary"
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/dashboard')}
+                className="text-gray-600 hover:text-gray-900"
               >
-                <Plus className="h-4 w-4 mr-2" />
-                Create New Course
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Dashboard
               </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* Search and Filter Bar */}
-        <div className="mb-6">
-          <Card className="card">
-            <CardContent className="p-4">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-icon-gray" />
-                    <Input
-                      placeholder="Search courses by title, description, or tags..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <select
-                    value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value as any)}
-                    className="px-3 py-2 border border-gray-300 rounded-md text-sm"
-                  >
-                    <option value="all">All Status</option>
-                    <option value="draft">Draft</option>
-                    <option value="published">Published</option>
-                    <option value="archived">Archived</option>
-                  </select>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as any)}
-                    className="px-3 py-2 border border-gray-300 rounded-md text-sm"
-                  >
-                    <option value="newest">Newest First</option>
-                    <option value="oldest">Oldest First</option>
-                    <option value="title">Title A-Z</option>
-                    <option value="duration">Duration</option>
-                  </select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Course List or Builder */}
-        {isCreating ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="space-y-6"
-          >
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="content">Content</TabsTrigger>
-                <TabsTrigger value="quizzes">Quizzes</TabsTrigger>
-                <TabsTrigger value="publish">Publish</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="overview" className="space-y-6">
-                <CourseMetadataForm
-                  course={courseBuilderState.course}
-                  onUpdate={handleUpdateCourseMetadata}
-                />
-              </TabsContent>
-              
-              <TabsContent value="content" className="space-y-6">
-                <EnhancedDragDropTimeline
-                  modules={courseBuilderState.modules}
-                  availableReels={reels || []}
-                  onAddModule={handleAddModule}
-                  onUpdateModule={handleUpdateModule}
-                  onDeleteModule={handleDeleteModule}
-                  onReorderModules={handleReorderModules}
-                  isPreviewMode={false}
-                />
-                
-                <EnhancedReelLibrary
-                  reels={reels || []}
-                  onAddReel={handleAddReel}
-                  addedReelIds={getAddedReelIds(courseBuilderState.modules)}
-                  searchQuery={reelSearchQuery}
-                  onSearchChange={setReelSearchQuery}
-                />
-              </TabsContent>
-              
-              <TabsContent value="quizzes" className="space-y-6">
-                <QuizSection 
-                  courseId={selectedCourse?.id || ''}
-                  quizzes={courseBuilderState.modules.filter(m => m.type === 'quiz')}
-                  onCreateQuiz={handleCreateQuiz}
-                />
-              </TabsContent>
-              
-              <TabsContent value="publish" className="space-y-6">
-                <PublishControlsComponent
-                  course={courseBuilderState.course}
-                  modules={courseBuilderState.modules}
-                  onPublish={handlePublish}
-                  onSaveDraft={handleSaveDraft}
-                  isPublishing={isSaving}
-                  isSaving={isSaving}
-                />
-              </TabsContent>
-            </Tabs>
-
-            {/* Action Buttons */}
-            <div className="flex justify-between items-center pt-6 border-t">
-              <div className="flex items-center gap-2 text-sm text-secondary-text">
-                {courseBuilderState.isDirty && (
-                  <span className="flex items-center gap-1">
-                    <AlertCircle className="h-4 w-4 text-amber-500" />
-                    Unsaved changes
-                  </span>
-                )}
-              </div>
-              
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsCreating(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={() => setIsPreviewMode(true)}
-                  variant="outline"
-                >
-                  <Eye className="h-4 w-4 mr-2" />
-                  Preview
-                </Button>
-                <Button
-                  onClick={handleCreateCourse}
-                  disabled={isSaving || !courseBuilderState.course.title}
-                  className="btn-primary"
-                >
-                  {isSaving ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Save className="h-4 w-4 mr-2" />
-                  )}
-                  {isSaving ? 'Creating...' : 'Create Course'}
-                </Button>
-              </div>
-            </div>
-          </motion.div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <AnimatePresence>
-              {filteredCourses.map((course) => (
-                <motion.div
-                  key={course.id}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  whileHover={{ scale: 1.02, y: -4 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <Card className="card hover:shadow-xl transition-all duration-300 cursor-pointer group border-0 shadow-md hover:shadow-2xl">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <CardTitle className="text-lg group-hover:text-accent-blue transition-colors line-clamp-2">
-                            {course.title}
-                          </CardTitle>
-                          <CardDescription className="mt-2 line-clamp-2 text-sm">
-                            {course.description || 'No description provided'}
-                          </CardDescription>
-                        </div>
-                        <div className="flex items-center space-x-1 ml-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditCourse(course);
-                            }}
-                            className="h-8 w-8 p-0 hover:bg-gray-100"
-                          >
-                            <Edit3 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedCourse(course);
-                              setIsPreviewMode(true);
-                            }}
-                            className="h-8 w-8 p-0 hover:bg-gray-100"
-                          >
-                            <Play className="h-4 w-4" />
-                          </Button>
-                          <div className="relative group">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-8 w-8 p-0 hover:bg-gray-100"
-                            >
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                            <div className="absolute right-0 top-8 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleCloneCourse(course);
-                                }}
-                                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100"
-                              >
-                                Clone Course
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteCourse(course.id);
-                                }}
-                                className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
-                              >
-                                Archive Course
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <Badge 
-                            variant={course.status === 'published' ? 'default' : 'secondary'}
-                            className={`text-xs font-medium ${
-                              course.status === 'published' 
-                                ? 'bg-status-green text-white' 
-                                : course.status === 'draft'
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : 'bg-gray-100 text-gray-800'
-                            }`}
-                          >
-                            {course.status === 'published' && <CheckCircle2 className="h-3 w-3 mr-1" />}
-                            {course.status === 'draft' && <Pause className="h-3 w-3 mr-1" />}
-                            {course.status === 'archived' && <XCircle className="h-3 w-3 mr-1" />}
-                            {course.status}
-                          </Badge>
-                          <span className="text-xs text-secondary-text capitalize font-medium">
-                            {course.difficultyLevel}
-                          </span>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-icon-gray" />
-                            <span className="text-secondary-text font-medium">
-                              {Math.floor((course.totalDuration || 0) / 60)}m
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <BookOpen className="h-4 w-4 text-icon-gray" />
-                            <span className="text-secondary-text font-medium">
-                              {course.modules?.length || 0} modules
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between text-sm">
-                          <div className="flex items-center gap-2">
-                            <Users className="h-4 w-4 text-icon-gray" />
-                            <span className="text-secondary-text">
-                              {course.enrolledCount || 0} enrolled
-                            </span>
-                          </div>
-                          <div className="text-xs text-secondary-text">
-                            {new Date(course.createdAt).toLocaleDateString()}
-                          </div>
-                        </div>
-                        
-                        {course.tags && course.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
-                            {course.tags.slice(0, 3).map((tag) => (
-                              <Badge key={tag} variant="outline" className="text-xs px-2 py-1">
-                                {tag}
-                              </Badge>
-                            ))}
-                            {course.tags.length > 3 && (
-                              <Badge variant="outline" className="text-xs px-2 py-1">
-                                +{course.tags.length - 3} more
-                              </Badge>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
-        )}
-
-        {/* Empty State */}
-        {!isCreating && filteredCourses.length === 0 && !coursesLoading && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <Card className="card">
-              <CardContent className="text-center py-16">
-                <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
-                  <BookOpen className="h-12 w-12 text-icon-gray" />
-                </div>
-                <h3 className="text-xl font-semibold text-primary-text mb-3">
-                  {searchQuery || filterStatus !== 'all' ? 'No courses found' : 'No courses yet'}
-                </h3>
-                <p className="text-secondary-text mb-8 max-w-md mx-auto">
-                  {searchQuery || filterStatus !== 'all'
-                    ? 'Try adjusting your search terms or filters to find what you\'re looking for'
-                    : 'Create your first course to start building structured training content from your reels and resources'
-                  }
+              <Separator orientation="vertical" className="h-6" />
+              <div>
+                <h1 className="text-lg font-semibold text-gray-900">
+                  {courseId ? 'Edit Course' : 'Create New Course'}
+                </h1>
+                <p className="text-sm text-gray-500">
+                  {STEP_TITLES[currentStep]}
                 </p>
-                {!searchQuery && filterStatus === 'all' && (
-                  <Button
-                    onClick={() => setIsCreating(true)}
-                    className="btn-primary"
-                    size="lg"
-                  >
-                    <Plus className="h-5 w-5 mr-2" />
-                    Create Your First Course
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
+              </div>
+            </div>
 
-        {/* Loading State */}
-        {coursesLoading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <Card key={i} className="card">
-                <CardContent className="p-6">
-                  <div className="animate-pulse space-y-4">
-                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                    <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-                    <div className="flex space-x-2">
-                      <div className="h-6 bg-gray-200 rounded w-16"></div>
-                      <div className="h-6 bg-gray-200 rounded w-20"></div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+            <div className="flex items-center space-x-3">
+              {lastSaved && (
+                <div className="text-sm text-gray-500 flex items-center">
+                  <Clock className="h-4 w-4 mr-1" />
+                  Saved {new Date(lastSaved).toLocaleTimeString()}
+                </div>
+              )}
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSave}
+                disabled={isSaving || !isDirty}
+                className="text-gray-600"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {isSaving ? 'Saving...' : 'Save'}
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={generatePreview}
+                disabled={!courseId}
+              >
+                <Eye className="h-4 w-4 mr-2" />
+                Preview
+              </Button>
+
+              {currentStep === 'publish' && (
+                <Button
+                  onClick={handlePublish}
+                  disabled={isSaving}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  {isSaving ? 'Publishing...' : 'Publish Course'}
+                </Button>
+              )}
+            </div>
           </div>
-        )}
+
+          {/* Progress Bar */}
+          <div className="pb-4">
+            <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
+              <span>Step {currentStepIndex + 1} of {COURSE_BUILDER_STEPS.length}</span>
+              <span>{Math.round(progress)}% Complete</span>
+            </div>
+            <Progress value={progress} className="h-2" />
+          </div>
         </div>
       </div>
-    </MainLayout>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          {/* Sidebar - Step Navigation */}
+          <div className="lg:col-span-1">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Course Builder</CardTitle>
+                <CardDescription>
+                  Follow these steps to create your course
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {COURSE_BUILDER_STEPS.map((step, index) => (
+                  <motion.div
+                    key={step}
+                    className={`flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors ${
+                      currentStep === step
+                        ? 'bg-blue-50 border border-blue-200'
+                        : 'hover:bg-gray-50'
+                    }`}
+                    onClick={() => setCurrentStep(step)}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                      currentStep === step
+                        ? 'bg-blue-600 text-white'
+                        : index < currentStepIndex
+                        ? 'bg-green-600 text-white'
+                        : 'bg-gray-200 text-gray-600'
+                    }`}>
+                      {index < currentStepIndex ? (
+                        <CheckCircle className="h-4 w-4" />
+                      ) : (
+                        index + 1
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-medium ${
+                        currentStep === step ? 'text-blue-900' : 'text-gray-900'
+                      }`}>
+                        {STEP_TITLES[step]}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {STEP_DESCRIPTIONS[step]}
+                      </p>
+                    </div>
+                  </motion.div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Main Content Area */}
+          <div className="lg:col-span-3">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentStep}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                {currentStep === 'metadata' && (
+                  <CourseMetadataStep
+                    metadata={metadata}
+                    onChange={setMetadata}
+                    errors={validationErrors}
+                    onNext={handleNextStep}
+                  />
+                )}
+                
+                {currentStep === 'timeline' && (
+                  <CourseTimelineStep
+                    modules={modules}
+                    onModulesChange={setModules}
+                    onNext={handleNextStep}
+                    onBack={handlePreviousStep}
+                  />
+                )}
+                
+                {currentStep === 'quizzes' && (
+                  <CourseQuizzesStep
+                    quizzes={quizzes}
+                    onQuizzesChange={setQuizzes}
+                    onNext={handleNextStep}
+                    onBack={handlePreviousStep}
+                  />
+                )}
+                
+                {currentStep === 'preview' && (
+                  <CoursePreviewStep
+                    preview={preview}
+                    onGeneratePreview={generatePreview}
+                    onNext={handleNextStep}
+                    onBack={handlePreviousStep}
+                  />
+                )}
+                
+                {currentStep === 'publish' && (
+                  <CoursePublishStep
+                    settings={publishSettings}
+                    onSettingsChange={setPublishSettings}
+                    onPublish={handlePublish}
+                    onBack={handlePreviousStep}
+                    isPublishing={isSaving}
+                  />
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
-// Quiz Section Component
-const QuizSection = ({ 
-  courseId, 
-  quizzes, 
-  onCreateQuiz 
-}: { 
-  courseId: string; 
-  quizzes: CourseModule[]; 
-  onCreateQuiz: (quiz: Omit<CourseQuiz, 'id' | 'createdAt' | 'updatedAt'>) => void;
-}) => {
-  const [isCreatingQuiz, setIsCreatingQuiz] = useState(false);
-  const [newQuizData, setNewQuizData] = useState<QuizQuestionForm>({
-    question: '',
-    type: 'multiple-choice',
-    options: ['', '', '', ''],
-    correctAnswer: '',
-    explanation: '',
-    points: 1,
-    timeLimit: undefined
-  });
+// Course Metadata Step Component
+function CourseMetadataStep({
+  metadata,
+  onChange,
+  errors,
+  onNext
+}: {
+  metadata: CourseMetadataForm;
+  onChange: (metadata: CourseMetadataForm) => void;
+  errors: CourseBuilderValidationError[];
+  onNext: () => void;
+}) {
+  const handleChange = (field: keyof CourseMetadataForm, value: any) => {
+    onChange({ ...metadata, [field]: value });
+  };
 
-  const handleCreateQuiz = () => {
-    if (!newQuizData.question.trim()) {
-      toast.error('Please enter a question');
-      return;
+  const handleTagsChange = (tags: string[]) => {
+    onChange({ ...metadata, tags });
+  };
+
+  const addTag = (tag: string) => {
+    if (tag.trim() && !metadata.tags.includes(tag.trim())) {
+      handleTagsChange([...metadata.tags, tag.trim()]);
     }
+  };
 
-    if (newQuizData.type === 'multiple-choice' && newQuizData.options.filter(o => o.trim()).length < 2) {
-      toast.error('Please provide at least 2 options');
-      return;
-    }
-
-    if (!newQuizData.correctAnswer.trim()) {
-      toast.error('Please provide a correct answer');
-      return;
-    }
-
-    const quizData: Omit<CourseQuiz, 'id' | 'createdAt' | 'updatedAt'> = {
-      courseId,
-      question: newQuizData.question,
-      type: newQuizData.type,
-      options: newQuizData.options.filter(o => o.trim()),
-      correctAnswer: newQuizData.correctAnswer,
-      explanation: newQuizData.explanation,
-      points: newQuizData.points,
-      timeLimit: newQuizData.timeLimit,
-      orderIndex: quizzes.length
-    };
-
-    onCreateQuiz(quizData);
-    setIsCreatingQuiz(false);
-    setNewQuizData({
-      question: '',
-      type: 'multiple-choice',
-      options: ['', '', '', ''],
-      correctAnswer: '',
-      explanation: '',
-      points: 1,
-      timeLimit: undefined
-    });
+  const removeTag = (tagToRemove: string) => {
+    handleTagsChange(metadata.tags.filter(tag => tag !== tagToRemove));
   };
 
   return (
-    <div className="space-y-6">
-      {/* Quiz List */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <HelpCircle className="h-5 w-5 text-accent-blue" />
-                Course Quizzes
-              </CardTitle>
-              <CardDescription>Add interactive quizzes to test learner comprehension</CardDescription>
-            </div>
-            <Button
-              onClick={() => setIsCreatingQuiz(true)}
-              className="btn-primary"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Quiz
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {quizzes.length > 0 ? (
-            <div className="space-y-4">
-              {quizzes.map((module, _index) => (
-                <QuizCard
-                  key={module.id}
-                  quiz={module.content as CourseQuiz}
-                  onStart={() => {}}
-                  onViewResults={() => {}}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-secondary-text">
-              <HelpCircle className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <p className="text-lg font-medium mb-2">No quizzes yet</p>
-              <p className="text-sm">Add quizzes to test learner comprehension</p>
-            </div>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center">
+          <FileText className="h-5 w-5 mr-2" />
+          Course Details
+        </CardTitle>
+        <CardDescription>
+          Set up the basic information for your course
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Title */}
+        <div className="space-y-2">
+          <Label htmlFor="title">Course Title *</Label>
+          <Input
+            id="title"
+            value={metadata.title}
+            onChange={(e) => handleChange('title', e.target.value)}
+            placeholder="Enter course title"
+            className={errors.some(e => e.field === 'title') ? 'border-red-500' : ''}
+          />
+          {errors.some(e => e.field === 'title') && (
+            <p className="text-sm text-red-600">
+              {errors.find(e => e.field === 'title')?.message}
+            </p>
           )}
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Create Quiz Form */}
-      {isCreatingQuiz && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Create New Quiz</CardTitle>
-            <CardDescription>Add a quiz question to your course</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        {/* Description */}
+        <div className="space-y-2">
+          <Label htmlFor="description">Course Description *</Label>
+          <Textarea
+            id="description"
+            value={metadata.description}
+            onChange={(e) => handleChange('description', e.target.value)}
+            placeholder="Describe what learners will learn in this course"
+            rows={4}
+            className={errors.some(e => e.field === 'description') ? 'border-red-500' : ''}
+          />
+          {errors.some(e => e.field === 'description') && (
+            <p className="text-sm text-red-600">
+              {errors.find(e => e.field === 'description')?.message}
+            </p>
+          )}
+        </div>
+
+        {/* Target Role and Category */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="targetRole">Target Role</Label>
+            <Input
+              id="targetRole"
+              value={metadata.targetRole}
+              onChange={(e) => handleChange('targetRole', e.target.value)}
+              placeholder="e.g., Machine Operators, Engineers"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="category">Category</Label>
+            <Input
+              id="category"
+              value={metadata.category}
+              onChange={(e) => handleChange('category', e.target.value)}
+              placeholder="e.g., Machine Setup, Maintenance"
+            />
+          </div>
+        </div>
+
+        {/* Difficulty Level and Estimated Time */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="difficultyLevel">Difficulty Level</Label>
+            <Select
+              value={metadata.difficultyLevel}
+              onValueChange={(value) => handleChange('difficultyLevel', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select difficulty" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="beginner">Beginner</SelectItem>
+                <SelectItem value="intermediate">Intermediate</SelectItem>
+                <SelectItem value="advanced">Advanced</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="estimatedTime">Estimated Time (minutes)</Label>
+            <Input
+              id="estimatedTime"
+              type="number"
+              value={metadata.estimatedTime}
+              onChange={(e) => handleChange('estimatedTime', parseInt(e.target.value) || 0)}
+              placeholder="0"
+              min="0"
+            />
+          </div>
+        </div>
+
+        {/* Tags */}
+        <div className="space-y-2">
+          <Label>Tags</Label>
+          <div className="flex flex-wrap gap-2 mb-2">
+            {metadata.tags.map((tag) => (
+              <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+                {tag}
+                <button
+                  onClick={() => removeTag(tag)}
+                  className="ml-1 hover:text-red-600"
+                >
+                  ×
+                </button>
+              </Badge>
+            ))}
+          </div>
+          <Input
+            placeholder="Add a tag and press Enter"
+            onKeyPress={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addTag(e.currentTarget.value);
+                e.currentTarget.value = '';
+              }
+            }}
+          />
+        </div>
+
+        {/* Prerequisites */}
+        <div className="space-y-2">
+          <Label>Prerequisites</Label>
+          <Textarea
+            value={metadata.prerequisites.join('\n')}
+            onChange={(e) => handleChange('prerequisites', e.target.value.split('\n').filter(p => p.trim()))}
+            placeholder="List any prerequisites for this course (one per line)"
+            rows={3}
+          />
+        </div>
+
+        {/* Course Settings */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium">Course Settings</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Question *</label>
-              <Input
-                value={newQuizData.question}
-                onChange={(e) => setNewQuizData(prev => ({ ...prev, question: e.target.value }))}
-                placeholder="Enter your question here..."
+              <Label htmlFor="visibility">Visibility</Label>
+              <Select
+                value={metadata.visibility}
+                onValueChange={(value) => handleChange('visibility', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="private">Private</SelectItem>
+                  <SelectItem value="public">Public</SelectItem>
+                  <SelectItem value="organization">Organization</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="passThreshold">Pass Threshold (%)</Label>
+              <div className="flex items-center space-x-2">
+                <Slider
+                  value={[metadata.passThreshold]}
+                  onValueChange={([value]) => handleChange('passThreshold', value)}
+                  max={100}
+                  min={0}
+                  step={5}
+                  className="flex-1"
+                />
+                <span className="text-sm text-gray-600 w-12">
+                  {metadata.passThreshold}%
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="requiresApproval">Requires Approval</Label>
+              <Switch
+                id="requiresApproval"
+                checked={metadata.requiresApproval}
+                onCheckedChange={(checked) => handleChange('requiresApproval', checked)}
               />
             </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Question Type *</label>
-              <select
-                value={newQuizData.type}
-                onChange={(e) => setNewQuizData(prev => ({ 
-                  ...prev, 
-                  type: e.target.value as any,
-                  options: e.target.value === 'multiple-choice' ? ['', '', '', ''] : [],
-                  correctAnswer: e.target.value === 'true-false' ? 'true' : ''
-                }))}
-                className="w-full p-2 border border-gray-300 rounded-md"
-              >
-                <option value="multiple-choice">Multiple Choice</option>
-                <option value="true-false">True/False</option>
-                <option value="short-answer">Short Answer</option>
-              </select>
-            </div>
-
-            {newQuizData.type === 'multiple-choice' && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Answer Options *</label>
-                {newQuizData.options.map((option, index) => (
-                  <Input
-                    key={index}
-                    value={option}
-                    onChange={(e) => {
-                      const newOptions = [...newQuizData.options];
-                      newOptions[index] = e.target.value;
-                      setNewQuizData(prev => ({ ...prev, options: newOptions }));
-                    }}
-                    placeholder={`Option ${index + 1}`}
-                  />
-                ))}
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Correct Answer *</label>
-              {newQuizData.type === 'multiple-choice' ? (
-                <select
-                  value={newQuizData.correctAnswer}
-                  onChange={(e) => setNewQuizData(prev => ({ ...prev, correctAnswer: e.target.value }))}
-                  className="w-full p-2 border border-gray-300 rounded-md"
-                >
-                  <option value="">Select correct answer</option>
-                  {newQuizData.options.filter(o => o.trim()).map((option, index) => (
-                    <option key={index} value={option}>{option}</option>
-                  ))}
-                </select>
-              ) : newQuizData.type === 'true-false' ? (
-                <select
-                  value={newQuizData.correctAnswer}
-                  onChange={(e) => setNewQuizData(prev => ({ ...prev, correctAnswer: e.target.value }))}
-                  className="w-full p-2 border border-gray-300 rounded-md"
-                >
-                  <option value="true">True</option>
-                  <option value="false">False</option>
-                </select>
-              ) : (
-                <Input
-                  value={newQuizData.correctAnswer}
-                  onChange={(e) => setNewQuizData(prev => ({ ...prev, correctAnswer: e.target.value }))}
-                  placeholder="Enter correct answer..."
-                />
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Explanation (optional)</label>
-              <Input
-                value={newQuizData.explanation}
-                onChange={(e) => setNewQuizData(prev => ({ ...prev, explanation: e.target.value }))}
-                placeholder="Explain why this is the correct answer..."
+            <div className="flex items-center justify-between">
+              <Label htmlFor="allowDownloads">Allow Downloads</Label>
+              <Switch
+                id="allowDownloads"
+                checked={metadata.allowDownloads}
+                onCheckedChange={(checked) => handleChange('allowDownloads', checked)}
               />
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Points</label>
-                <Input
-                  type="number"
-                  min="1"
-                  value={newQuizData.points}
-                  onChange={(e) => setNewQuizData(prev => ({ ...prev, points: parseInt(e.target.value) || 1 }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Time Limit (seconds)</label>
-                <Input
-                  type="number"
-                  min="1"
-                  value={newQuizData.timeLimit || ''}
-                  onChange={(e) => setNewQuizData(prev => ({ 
-                    ...prev, 
-                    timeLimit: e.target.value ? parseInt(e.target.value) : undefined 
-                  }))}
-                  placeholder="No limit"
-                />
-              </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="enableCertificates">Enable Certificates</Label>
+              <Switch
+                id="enableCertificates"
+                checked={metadata.enableCertificates}
+                onCheckedChange={(checked) => handleChange('enableCertificates', checked)}
+              />
             </div>
+          </div>
+        </div>
 
-            <div className="flex gap-3 pt-4">
-              <Button
-                onClick={() => setIsCreatingQuiz(false)}
-                variant="outline"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleCreateQuiz}
-                className="btn-primary"
-              >
-                Add Quiz
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+        {/* Action Buttons */}
+        <div className="flex justify-end pt-6">
+          <Button onClick={onNext} className="bg-blue-600 hover:bg-blue-700">
+            Next: Course Content
+            <ChevronRight className="h-4 w-4 ml-2" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
-};
+}
+
+// Placeholder components for other steps
+function CourseTimelineStep({ onNext }: any) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center">
+          <Video className="h-5 w-5 mr-2" />
+          Course Content
+        </CardTitle>
+        <CardDescription>
+          Add and organize your course content
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="text-center py-12">
+          <Video className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Timeline Builder</h3>
+          <p className="text-gray-600 mb-4">Drag and drop content to build your course timeline</p>
+          <Button onClick={onNext} className="bg-blue-600 hover:bg-blue-700">
+            Next: Assessments
+            <ChevronRight className="h-4 w-4 ml-2" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function CourseQuizzesStep({ onNext }: any) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center">
+          <HelpCircle className="h-5 w-5 mr-2" />
+          Assessments
+        </CardTitle>
+        <CardDescription>
+          Create quizzes and assessments for your course
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="text-center py-12">
+          <HelpCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Quiz Builder</h3>
+          <p className="text-gray-600 mb-4">Create interactive quizzes to test learner knowledge</p>
+          <Button onClick={onNext} className="bg-blue-600 hover:bg-blue-700">
+            Next: Preview
+            <ChevronRight className="h-4 w-4 ml-2" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function CoursePreviewStep({ onNext }: any) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center">
+          <Eye className="h-5 w-5 mr-2" />
+          Course Preview
+        </CardTitle>
+        <CardDescription>
+          Review your course before publishing
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="text-center py-12">
+          <Eye className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Preview Mode</h3>
+          <p className="text-gray-600 mb-4">See how your course will look to learners</p>
+          <Button onClick={onNext} className="bg-blue-600 hover:bg-blue-700">
+            Next: Publish
+            <ChevronRight className="h-4 w-4 ml-2" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function CoursePublishStep({ onPublish, isPublishing }: any) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center">
+          <Send className="h-5 w-5 mr-2" />
+          Publish Course
+        </CardTitle>
+        <CardDescription>
+          Configure publishing settings and make your course live
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="text-center py-12">
+          <Send className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Publish Settings</h3>
+          <p className="text-gray-600 mb-4">Configure how your course will be published</p>
+          <Button 
+            onClick={onPublish} 
+            disabled={isPublishing}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            {isPublishing ? 'Publishing...' : 'Publish Course'}
+            <Send className="h-4 w-4 ml-2" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
