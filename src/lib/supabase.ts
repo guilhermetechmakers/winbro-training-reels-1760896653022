@@ -412,9 +412,316 @@ export interface Database {
           created_at?: string;
         };
       };
+      // Customer Content Management Tables
+      customers: {
+        Row: {
+          id: string;
+          name: string;
+          domain: string | null;
+          contact_email: string;
+          contact_phone: string | null;
+          address: Record<string, any>;
+          billing_info: Record<string, any>;
+          subscription_tier: 'basic' | 'professional' | 'enterprise';
+          status: 'active' | 'suspended' | 'cancelled' | 'trial';
+          trial_ends_at: string | null;
+          max_seats: number;
+          max_storage_gb: number;
+          features: Record<string, any>;
+          metadata: Record<string, any>;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          domain?: string | null;
+          contact_email: string;
+          contact_phone?: string | null;
+          address?: Record<string, any>;
+          billing_info?: Record<string, any>;
+          subscription_tier?: 'basic' | 'professional' | 'enterprise';
+          status?: 'active' | 'suspended' | 'cancelled' | 'trial';
+          trial_ends_at?: string | null;
+          max_seats?: number;
+          max_storage_gb?: number;
+          features?: Record<string, any>;
+          metadata?: Record<string, any>;
+        };
+        Update: {
+          name?: string;
+          domain?: string | null;
+          contact_email?: string;
+          contact_phone?: string | null;
+          address?: Record<string, any>;
+          billing_info?: Record<string, any>;
+          subscription_tier?: 'basic' | 'professional' | 'enterprise';
+          status?: 'active' | 'suspended' | 'cancelled' | 'trial';
+          trial_ends_at?: string | null;
+          max_seats?: number;
+          max_storage_gb?: number;
+          features?: Record<string, any>;
+          metadata?: Record<string, any>;
+        };
+      };
+      customer_subscriptions: {
+        Row: {
+          id: string;
+          customer_id: string;
+          stripe_subscription_id: string | null;
+          stripe_customer_id: string | null;
+          plan_name: string;
+          plan_tier: 'basic' | 'professional' | 'enterprise';
+          status: 'active' | 'past_due' | 'cancelled' | 'unpaid' | 'trialing';
+          current_period_start: string;
+          current_period_end: string;
+          cancel_at_period_end: boolean;
+          cancelled_at: string | null;
+          trial_start: string | null;
+          trial_end: string | null;
+          seats_included: number;
+          storage_gb_included: number;
+          price_per_seat_cents: number;
+          price_per_storage_gb_cents: number;
+          monthly_price_cents: number;
+          currency: string;
+          billing_cycle: 'monthly' | 'yearly';
+          metadata: Record<string, any>;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          customer_id: string;
+          stripe_subscription_id?: string | null;
+          stripe_customer_id?: string | null;
+          plan_name: string;
+          plan_tier: 'basic' | 'professional' | 'enterprise';
+          status?: 'active' | 'past_due' | 'cancelled' | 'unpaid' | 'trialing';
+          current_period_start: string;
+          current_period_end: string;
+          cancel_at_period_end?: boolean;
+          cancelled_at?: string | null;
+          trial_start?: string | null;
+          trial_end?: string | null;
+          seats_included?: number;
+          storage_gb_included?: number;
+          price_per_seat_cents?: number;
+          price_per_storage_gb_cents?: number;
+          monthly_price_cents?: number;
+          currency?: string;
+          billing_cycle?: 'monthly' | 'yearly';
+          metadata?: Record<string, any>;
+        };
+        Update: {
+          stripe_subscription_id?: string | null;
+          stripe_customer_id?: string | null;
+          plan_name?: string;
+          plan_tier?: 'basic' | 'professional' | 'enterprise';
+          status?: 'active' | 'past_due' | 'cancelled' | 'unpaid' | 'trialing';
+          current_period_start?: string;
+          current_period_end?: string;
+          cancel_at_period_end?: boolean;
+          cancelled_at?: string | null;
+          trial_start?: string | null;
+          trial_end?: string | null;
+          seats_included?: number;
+          storage_gb_included?: number;
+          price_per_seat_cents?: number;
+          price_per_storage_gb_cents?: number;
+          monthly_price_cents?: number;
+          currency?: string;
+          billing_cycle?: 'monthly' | 'yearly';
+          metadata?: Record<string, any>;
+        };
+      };
+      customer_content_libraries: {
+        Row: {
+          id: string;
+          customer_id: string;
+          video_id: string;
+          assigned_by: string | null;
+          assignment_type: 'manual' | 'automatic' | 'subscription';
+          assignment_reason: string | null;
+          is_featured: boolean;
+          display_order: number;
+          access_level: 'standard' | 'premium' | 'exclusive';
+          expires_at: string | null;
+          metadata: Record<string, any>;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          customer_id: string;
+          video_id: string;
+          assigned_by?: string | null;
+          assignment_type?: 'manual' | 'automatic' | 'subscription';
+          assignment_reason?: string | null;
+          is_featured?: boolean;
+          display_order?: number;
+          access_level?: 'standard' | 'premium' | 'exclusive';
+          expires_at?: string | null;
+          metadata?: Record<string, any>;
+        };
+        Update: {
+          assigned_by?: string | null;
+          assignment_type?: 'manual' | 'automatic' | 'subscription';
+          assignment_reason?: string | null;
+          is_featured?: boolean;
+          display_order?: number;
+          access_level?: 'standard' | 'premium' | 'exclusive';
+          expires_at?: string | null;
+          metadata?: Record<string, any>;
+        };
+      };
+      customer_machines: {
+        Row: {
+          id: string;
+          customer_id: string;
+          machine_model: string;
+          machine_serial: string | null;
+          machine_type: string | null;
+          purchase_date: string | null;
+          warranty_expires: string | null;
+          location: string | null;
+          status: 'active' | 'maintenance' | 'retired' | 'sold';
+          specifications: Record<string, any>;
+          maintenance_schedule: Record<string, any>;
+          notes: string | null;
+          metadata: Record<string, any>;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          customer_id: string;
+          machine_model: string;
+          machine_serial?: string | null;
+          machine_type?: string | null;
+          purchase_date?: string | null;
+          warranty_expires?: string | null;
+          location?: string | null;
+          status?: 'active' | 'maintenance' | 'retired' | 'sold';
+          specifications?: Record<string, any>;
+          maintenance_schedule?: Record<string, any>;
+          notes?: string | null;
+          metadata?: Record<string, any>;
+        };
+        Update: {
+          machine_model?: string;
+          machine_serial?: string | null;
+          machine_type?: string | null;
+          purchase_date?: string | null;
+          warranty_expires?: string | null;
+          location?: string | null;
+          status?: 'active' | 'maintenance' | 'retired' | 'sold';
+          specifications?: Record<string, any>;
+          maintenance_schedule?: Record<string, any>;
+          notes?: string | null;
+          metadata?: Record<string, any>;
+        };
+      };
+      customer_content_analytics: {
+        Row: {
+          id: string;
+          customer_id: string;
+          video_id: string;
+          user_id: string | null;
+          event_type: 'view' | 'download' | 'bookmark' | 'complete' | 'share';
+          event_data: Record<string, any>;
+          session_id: string | null;
+          ip_address: string | null;
+          user_agent: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          customer_id: string;
+          video_id: string;
+          user_id?: string | null;
+          event_type: 'view' | 'download' | 'bookmark' | 'complete' | 'share';
+          event_data?: Record<string, any>;
+          session_id?: string | null;
+          ip_address?: string | null;
+          user_agent?: string | null;
+        };
+        Update: {
+          event_data?: Record<string, any>;
+        };
+      };
     };
-    Views: {};
-    Functions: {};
+    Views: {
+      customer_content_summary: {
+        Row: {
+          library_id: string;
+          customer_id: string;
+          video_id: string;
+          is_featured: boolean;
+          display_order: number;
+          access_level: string;
+          assigned_by: string | null;
+          assignment_type: string;
+          assigned_at: string;
+          title: string;
+          description: string | null;
+          duration: number;
+          thumbnail_url: string | null;
+          machine_model: string | null;
+          process_type: string | null;
+          tooling: string | null;
+          skill_level: string | null;
+          tags: string[];
+          view_count: number;
+          bookmark_count: number;
+          assigned_by_name: string | null;
+          customer_name: string;
+        };
+      };
+      customer_analytics_summary: {
+        Row: {
+          customer_id: string;
+          video_id: string;
+          video_title: string;
+          total_events: number;
+          unique_users: number;
+          view_count: number;
+          download_count: number;
+          bookmark_count: number;
+          completion_count: number;
+          last_activity: string;
+        };
+      };
+    };
+    Functions: {
+      get_customer_content: {
+        Args: {
+          p_customer_id: string;
+        };
+        Returns: {
+          video_id: string;
+          title: string;
+          description: string;
+          duration: number;
+          thumbnail_url: string;
+          machine_model: string;
+          process_type: string;
+          tooling: string;
+          skill_level: string;
+          tags: string[];
+          is_featured: boolean;
+          access_level: string;
+          view_count: number;
+          bookmark_count: number;
+        }[];
+      };
+      auto_assign_content_by_machines: {
+        Args: {
+          p_customer_id: string;
+        };
+        Returns: number;
+      };
+    };
     Enums: {};
   };
 }

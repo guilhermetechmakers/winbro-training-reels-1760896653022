@@ -1,6 +1,7 @@
 /**
  * Video-related types for Winbro Training Reels
  * Generated: 2024-12-13T12:00:00Z
+ * Updated: 2024-12-20T12:00:00Z - Added customer-specific content support
  */
 
 import type { User } from './index';
