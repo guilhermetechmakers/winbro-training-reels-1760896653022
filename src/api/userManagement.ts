@@ -32,7 +32,7 @@ export const getUserRoles = async (): Promise<UserRole[]> => {
     .from('user_roles')
     .select('*')
     .eq('is_active', true)
-    .order('display_name');
+    .order('role_name');
 
   if (error) throw error;
   return data || [];

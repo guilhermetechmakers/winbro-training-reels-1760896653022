@@ -444,7 +444,7 @@ export default function UserManagement() {
                     <SelectItem value="">All Roles</SelectItem>
                     {roles.map(role => (
                       <SelectItem key={role.id} value={role.id}>
-                        {role.display_name}
+                        {role.role_name}
                       </SelectItem>
                     ))}
                   </SelectContent>
