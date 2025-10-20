@@ -27,8 +27,6 @@ import {
   Download,
   RefreshCw,
   Database,
-  BarChart4,
-  PieChart,
   CheckCircle,
   XCircle,
   Search,
@@ -36,6 +34,9 @@ import {
   UserPlus
 } from 'lucide-react';
 import { useAdminDashboardStats, useAdminDataRefresh } from '@/hooks/useAdmin';
+import { AnalyticsDashboard } from '@/components/admin/AdminAnalyticsCharts';
+import { AdminNotifications } from '@/components/admin/AdminNotifications';
+import { AdminErrorWrapper } from '@/components/admin/AdminErrorBoundary';
 import { toast } from 'sonner';
 
 // =====================================================
@@ -829,106 +830,6 @@ function SubscriptionManagementSection({ loading }: { loading?: boolean }) {
   );
 }
 
-// =====================================================
-// Analytics Section Component
-// =====================================================
-
-function AnalyticsSection({ loading }: { loading?: boolean }) {
-  if (loading) {
-    return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="card">
-          <CardHeader>
-            <Skeleton className="h-6 w-32" />
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="h-64 w-full" />
-          </CardContent>
-        </Card>
-        <Card className="card">
-          <CardHeader>
-            <Skeleton className="h-6 w-32" />
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="h-64 w-full" />
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <Card className="card">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <BarChart4 className="h-5 w-5 text-accent-blue" />
-            <span>User Growth</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-64 flex items-center justify-center text-secondary-text">
-            <div className="text-center">
-              <BarChart4 className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <p>User growth chart would be displayed here</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="card">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <PieChart className="h-5 w-5 text-accent-blue" />
-            <span>Content Distribution</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-64 flex items-center justify-center text-secondary-text">
-            <div className="text-center">
-              <PieChart className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <p>Content distribution chart would be displayed here</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="card">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <TrendingUp className="h-5 w-5 text-accent-blue" />
-            <span>Revenue Trends</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-64 flex items-center justify-center text-secondary-text">
-            <div className="text-center">
-              <TrendingUp className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <p>Revenue trends chart would be displayed here</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="card">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Activity className="h-5 w-5 text-accent-blue" />
-            <span>System Performance</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-64 flex items-center justify-center text-secondary-text">
-            <div className="text-center">
-              <Activity className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <p>System performance metrics would be displayed here</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
 
 // =====================================================
 // System Settings Section Component
@@ -1139,8 +1040,9 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-main-bg">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <AdminErrorWrapper context="AdminDashboard">
+      <div className="min-h-screen bg-main-bg">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
@@ -1289,7 +1191,7 @@ export default function AdminDashboard() {
 
           {/* Analytics Tab */}
           <TabsContent value="analytics" className="space-y-6">
-            <AnalyticsSection loading={isLoading} />
+            <AnalyticsDashboard loading={isLoading} onRefresh={handleRefresh} />
           </TabsContent>
 
           {/* Settings Tab */}
@@ -1388,58 +1290,66 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Recent Activity */}
-        <Card className="card">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Clock className="h-5 w-5 text-accent-blue" />
-              <span>Recent Activity</span>
-            </CardTitle>
-            <CardDescription>Latest admin actions and system events</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="space-y-3">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="flex items-center space-x-3">
-                    <Skeleton className="h-8 w-8 rounded-full" />
-                    <div className="flex-1">
-                      <Skeleton className="h-4 w-3/4 mb-1" />
-                      <Skeleton className="h-3 w-1/2" />
+        {/* Notifications and Recent Activity */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <AdminNotifications 
+            loading={isLoading} 
+            onRefresh={handleRefresh}
+          />
+          
+          <Card className="card">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Clock className="h-5 w-5 text-accent-blue" />
+                <span>Recent Activity</span>
+              </CardTitle>
+              <CardDescription>Latest admin actions and system events</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="space-y-3">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="flex items-center space-x-3">
+                      <Skeleton className="h-8 w-8 rounded-full" />
+                      <div className="flex-1">
+                        <Skeleton className="h-4 w-3/4 mb-1" />
+                        <Skeleton className="h-3 w-1/2" />
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {dashboardStats?.data?.recent_activity?.slice(0, 5).map((activity: any, index: number) => (
-                  <div key={index} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                    <div className="p-2 rounded-full bg-accent-blue/10">
-                      <Activity className="h-4 w-4 text-accent-blue" />
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {dashboardStats?.data?.recent_activity?.slice(0, 5).map((activity: any, index: number) => (
+                    <div key={index} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                      <div className="p-2 rounded-full bg-accent-blue/10">
+                        <Activity className="h-4 w-4 text-accent-blue" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-primary-text">
+                          {activity.action_description}
+                        </p>
+                        <p className="text-xs text-secondary-text">
+                          {new Date(activity.created_at).toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="text-xs text-secondary-text">
+                        {activity.action_type}
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-primary-text">
-                        {activity.action_description}
-                      </p>
-                      <p className="text-xs text-secondary-text">
-                        {new Date(activity.created_at).toLocaleString()}
-                      </p>
+                  )) || (
+                    <div className="text-center py-8 text-secondary-text">
+                      <Activity className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                      <p>No recent activity</p>
                     </div>
-                    <div className="text-xs text-secondary-text">
-                      {activity.action_type}
-                    </div>
-                  </div>
-                )) || (
-                  <div className="text-center py-8 text-secondary-text">
-                    <Activity className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                    <p>No recent activity</p>
-                  </div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+        </div>
       </div>
-    </div>
+    </AdminErrorWrapper>
   );
 }

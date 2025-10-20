@@ -1,0 +1,12 @@
+{
+  "migration_name": "20241221140000_create_admin_management_tables",
+  "created_at": "2024-12-21T14:00:00Z",
+  "description": "Create admin management tables for system settings, notifications, and management actions",
+  "tables_created": ["admin_management_actions", "admin_system_settings", "admin_notifications"],
+  "tables_modified": [],
+  "tables_deleted": [],
+  "breaking_changes": false,
+  "rollback_sql": "DROP TABLE IF EXISTS admin_notifications CASCADE; DROP TABLE IF EXISTS admin_system_settings CASCADE; DROP TABLE IF EXISTS admin_management_actions CASCADE;",
+  "estimated_rows": 0,
+  "requires_downtime": false
+}
