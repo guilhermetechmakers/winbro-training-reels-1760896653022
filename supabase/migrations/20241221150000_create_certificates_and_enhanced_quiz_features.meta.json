@@ -1,0 +1,12 @@
+{
+  "migration_name": "20241221150000_create_certificates_and_enhanced_quiz_features",
+  "created_at": "2024-12-21T15:00:00Z",
+  "description": "Create certificates, quiz configurations, and learning analytics tables for enhanced interactive learning features",
+  "tables_created": ["certificates", "quiz_configurations", "learning_analytics"],
+  "tables_modified": [],
+  "tables_deleted": [],
+  "breaking_changes": false,
+  "rollback_sql": "DROP TABLE IF EXISTS learning_analytics CASCADE; DROP TABLE IF EXISTS quiz_configurations CASCADE; DROP TABLE IF EXISTS certificates CASCADE;",
+  "estimated_rows": 0,
+  "requires_downtime": false
+}

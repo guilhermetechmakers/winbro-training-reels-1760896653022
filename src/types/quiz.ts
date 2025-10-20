@@ -229,3 +229,184 @@ export interface CourseQuiz {
   createdAt: string;
   updatedAt: string;
 }
+// Enhanced quiz features
+export interface QuizConfiguration {
+  id: string;
+  course_id: string;
+  quiz_id?: string;
+  allow_retake: boolean;
+  max_attempts: number;
+  show_correct_answers: boolean;
+  show_explanations: boolean;
+  randomize_questions: boolean;
+  randomize_answers: boolean;
+  time_limit?: number;
+  pass_threshold: number;
+  require_all_questions: boolean;
+  allow_skip_questions: boolean;
+  show_progress: boolean;
+  show_timer: boolean;
+  auto_submit: boolean;
+  immediate_feedback: boolean;
+  show_score_breakdown: boolean;
+  custom_feedback?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Certificate interface
+export interface Certificate {
+  id: string;
+  user_id: string;
+  course_id: string;
+  enrollment_id: string;
+  certificate_number: string;
+  title: string;
+  recipient_name: string;
+  course_title: string;
+  completion_date: string;
+  score: number;
+  template_id: string;
+  issued_by: string;
+  issuer_signature?: string;
+  verification_code: string;
+  status: 'active' | 'revoked' | 'expired';
+  expires_at?: string;
+  pdf_url?: string;
+  thumbnail_url?: string;
+  metadata: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+// Learning analytics event
+export interface LearningAnalyticsEvent {
+  id: string;
+  user_id: string;
+  course_id: string;
+  module_id?: string;
+  quiz_id?: string;
+  event_type: string;
+  event_data: Record<string, any>;
+  duration: number;
+  score?: number;
+  progress_percentage?: number;
+  session_id?: string;
+  device_type?: string;
+  browser_info?: string;
+  created_at: string;
+}
+
+// Enhanced quiz session with configuration
+export interface EnhancedQuizSession extends QuizSession {
+  configuration: QuizConfiguration;
+  timeRemaining?: number;
+  currentAttempt: number;
+  maxAttempts: number;
+  canRetake: boolean;
+  showProgress: boolean;
+  showTimer: boolean;
+  immediateFeedback: boolean;
+}
+
+// Enhanced quiz result with certificate info
+export interface EnhancedQuizResult extends QuizResult {
+  certificate?: Certificate;
+  canRetake: boolean;
+  attemptsRemaining: number;
+  nextRetakeDate?: string;
+  feedback?: string;
+}
+
+// Quiz configuration form data
+export interface QuizConfigurationForm {
+  allow_retake: boolean;
+  max_attempts: number;
+  show_correct_answers: boolean;
+  show_explanations: boolean;
+  randomize_questions: boolean;
+  randomize_answers: boolean;
+  time_limit?: number;
+  pass_threshold: number;
+  require_all_questions: boolean;
+  allow_skip_questions: boolean;
+  show_progress: boolean;
+  show_timer: boolean;
+  auto_submit: boolean;
+  immediate_feedback: boolean;
+  show_score_breakdown: boolean;
+  custom_feedback?: string;
+}
+
+// Quiz analytics
+export interface QuizAnalytics {
+  quiz_id: string;
+  quiz_title: string;
+  total_attempts: number;
+  unique_attempts: number;
+  average_score: number;
+  pass_rate: number;
+  average_time_spent: number;
+  question_analytics: Array<{
+    question_id: string;
+    question_text: string;
+    correct_rate: number;
+    average_time: number;
+    common_wrong_answers: string[];
+  }>;
+  difficulty_analysis: {
+    easy_questions: number;
+    medium_questions: number;
+    hard_questions: number;
+    overall_difficulty: number;
+  };
+  user_performance: Array<{
+    user_id: string;
+    user_name: string;
+    best_score: number;
+    attempts: number;
+    last_attempt: string;
+  }>;
+}
+
+// Enhanced quiz component props
+export interface EnhancedQuizPlayerProps extends QuizPlayerProps {
+  configuration?: QuizConfiguration;
+  onCertificateEarned?: (certificate: Certificate) => void;
+  onAnalyticsEvent?: (event: LearningAnalyticsEvent) => void;
+}
+
+export interface QuizConfigurationProps {
+  courseId: string;
+  quizId?: string;
+  configuration?: QuizConfiguration;
+  onSave: (configuration: QuizConfiguration) => void;
+  onCancel: () => void;
+}
+
+export interface CertificateDisplayProps {
+  certificate: Certificate;
+  onDownload?: () => void;
+  onShare?: () => void;
+  onVerify?: () => void;
+}
+
+// Enhanced quiz hooks return types
+export interface UseEnhancedQuizReturn extends UseQuizReturn {
+  configuration: QuizConfiguration | null;
+  certificate: Certificate | null;
+  analytics: QuizAnalytics | null;
+  startQuizWithConfig: (config: QuizConfiguration) => void;
+  logAnalyticsEvent: (event: Omit<LearningAnalyticsEvent, 'id' | 'created_at'>) => void;
+  generateCertificate: () => Promise<Certificate>;
+}
+
+export interface UseQuizConfigurationReturn {
+  configuration: QuizConfiguration | null;
+  isLoading: boolean;
+  error: string | null;
+  updateConfiguration: (updates: Partial<QuizConfiguration>) => Promise<void>;
+  saveConfiguration: () => Promise<void>;
+  resetConfiguration: () => void;
+  validateConfiguration: () => QuizValidationError[];
+}
