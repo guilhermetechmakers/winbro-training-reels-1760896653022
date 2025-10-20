@@ -19,12 +19,14 @@ import {
   MoreVertical,
   CheckCircle2,
   XCircle,
-  Pause
+  Pause,
+  Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useCourses, useCreateCourse, useUpdateCourse } from '@/hooks/useCourses';
+import { useCourses } from '@/hooks/useCourses';
 import { useReels } from '@/hooks/useReels';
 import { useCreateQuiz } from '@/hooks/useQuiz';
+import { CourseManagementService } from '@/services/courseManagementService';
 import type { Course, CourseModule, Reel, CreateCourseInput, CourseBuilderState } from '@/types';
 import type { CourseQuiz, QuizQuestionForm } from '@/types/quiz';
 import { toast } from 'sonner';
@@ -60,8 +62,6 @@ export default function CourseBuilder() {
   // API hooks
   const { data: courses, isLoading: coursesLoading } = useCourses();
   const { data: reels } = useReels();
-  const createCourseMutation = useCreateCourse();
-  const updateCourseMutation = useUpdateCourse();
 
   // Course builder state
   const [courseBuilderState, setCourseBuilderState] = useState<CourseBuilderState>({
@@ -92,6 +92,28 @@ export default function CourseBuilder() {
       return () => clearTimeout(timeoutId);
     }
   }, [courseBuilderState.isDirty, selectedCourse]);
+
+  // Load course for editing
+  const handleEditCourse = useCallback(async (course: Course) => {
+    try {
+      const courseWithDetails = await CourseManagementService.getCourseWithDetails(course.id);
+      if (courseWithDetails) {
+        setSelectedCourse(courseWithDetails);
+        setCourseBuilderState({
+          course: courseWithDetails,
+          modules: courseWithDetails.modules || [],
+          isDirty: false,
+          isSaving: false,
+          lastSaved: new Date().toISOString(),
+        });
+        setIsCreating(true);
+        setActiveTab('overview');
+      }
+    } catch (error) {
+      toast.error('Failed to load course for editing');
+      console.error('Error loading course:', error);
+    }
+  }, []);
 
   // Create new course
   const handleCreateCourse = useCallback(async () => {
@@ -125,7 +147,7 @@ export default function CourseBuilder() {
         allowDownloads: courseBuilderState.course.allowDownloads || false,
       };
 
-      const newCourse = await createCourseMutation.mutateAsync(courseData);
+      const newCourse = await CourseManagementService.createCourse(courseData);
       setSelectedCourse(newCourse);
       setIsCreating(false);
       setCourseBuilderState(prev => ({ ...prev, isDirty: false }));
@@ -134,7 +156,7 @@ export default function CourseBuilder() {
       toast.error('Failed to create course');
       console.error('Error creating course:', error);
     }
-  }, [courseBuilderState, createCourseMutation]);
+  }, [courseBuilderState]);
 
 
   // Update course metadata
@@ -201,16 +223,17 @@ export default function CourseBuilder() {
   const handlePublish = useCallback(async () => {
     if (!selectedCourse) return;
     
+    // Validate course before publishing
+    const validation = CourseManagementService.validateCourseForPublishing(selectedCourse);
+    if (!validation.isValid) {
+      toast.error(`Cannot publish course: ${validation.errors.join(', ')}`);
+      return;
+    }
+    
     setIsSaving(true);
     try {
-      await updateCourseMutation.mutateAsync({
-        id: selectedCourse.id,
-        updates: {
-          ...courseBuilderState.course,
-          status: 'published',
-        },
-      });
-      
+      const publishedCourse = await CourseManagementService.publishCourse(selectedCourse.id);
+      setSelectedCourse(publishedCourse);
       setCourseBuilderState(prev => ({ ...prev, isDirty: false }));
       toast.success('Course published successfully');
     } catch (error) {
@@ -219,7 +242,7 @@ export default function CourseBuilder() {
     } finally {
       setIsSaving(false);
     }
-  }, [selectedCourse, courseBuilderState.course, updateCourseMutation]);
+  }, [selectedCourse]);
 
   // Save draft
   const handleSaveDraft = useCallback(async () => {
@@ -227,12 +250,9 @@ export default function CourseBuilder() {
     
     setIsSaving(true);
     try {
-      await updateCourseMutation.mutateAsync({
-        id: selectedCourse.id,
-        updates: {
-          ...courseBuilderState.course,
-          status: 'draft',
-        },
+      await CourseManagementService.updateCourseMetadata(selectedCourse.id, {
+        ...courseBuilderState.course,
+        status: 'draft',
       });
       
       setCourseBuilderState(prev => ({ ...prev, isDirty: false }));
@@ -243,7 +263,7 @@ export default function CourseBuilder() {
     } finally {
       setIsSaving(false);
     }
-  }, [selectedCourse, courseBuilderState.course, updateCourseMutation]);
+  }, [selectedCourse, courseBuilderState.course]);
 
   // Add reel to course
   const handleAddReel = useCallback((reel: Reel) => {
@@ -292,6 +312,43 @@ export default function CourseBuilder() {
     }
   }, [createQuizMutation, handleAddQuiz, selectedCourse]);
 
+  // Delete course
+  const handleDeleteCourse = useCallback(async (courseId: string) => {
+    if (!confirm('Are you sure you want to delete this course? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await CourseManagementService.archiveCourse(courseId);
+      toast.success('Course archived successfully');
+      // Refresh courses list
+      window.location.reload();
+    } catch (error) {
+      toast.error('Failed to archive course');
+      console.error('Error archiving course:', error);
+    }
+  }, []);
+
+  // Clone course
+  const handleCloneCourse = useCallback(async (course: Course) => {
+    const newTitle = prompt('Enter a title for the cloned course:', `${course.title} (Copy)`);
+    if (!newTitle) return;
+
+    try {
+      await CourseManagementService.cloneCourse(
+        course.id,
+        newTitle,
+        course.description
+      );
+      toast.success('Course cloned successfully');
+      // Refresh courses list
+      window.location.reload();
+    } catch (error) {
+      toast.error('Failed to clone course');
+      console.error('Error cloning course:', error);
+    }
+  }, []);
+
 
 
 
@@ -322,6 +379,11 @@ export default function CourseBuilder() {
   }) || [];
 
   if (isPreviewMode && selectedCourse) {
+    const totalDuration = courseBuilderState.modules.reduce((sum, module) => sum + (module.estimatedDuration || 0), 0);
+    const moduleCount = courseBuilderState.modules.length;
+    const quizCount = courseBuilderState.modules.filter(m => m.type === 'quiz').length;
+    const reelCount = courseBuilderState.modules.filter(m => m.type === 'reel').length;
+
     return (
       <div className="min-h-screen bg-main-bg">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -333,42 +395,85 @@ export default function CourseBuilder() {
           </div>
           <Card className="card">
             <CardHeader>
-              <CardTitle>{selectedCourse.title}</CardTitle>
-              <CardDescription>{selectedCourse.description}</CardDescription>
+              <CardTitle className="text-2xl">{selectedCourse.title}</CardTitle>
+              <CardDescription className="text-base">{selectedCourse.description}</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="grid grid-cols-3 gap-4 text-sm">
-                  <div className="flex items-center">
-                    <Clock className="h-4 w-4 mr-2 text-secondary-text" />
-                    <span>{Math.floor(selectedCourse.totalDuration / 60)} minutes</span>
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div className="flex items-center p-3 bg-gray-50 rounded-lg">
+                    <Clock className="h-5 w-5 mr-2 text-accent-blue" />
+                    <div>
+                      <div className="font-medium">{Math.floor(totalDuration / 60)} minutes</div>
+                      <div className="text-xs text-gray-500">Total Duration</div>
+                    </div>
                   </div>
-                  <div className="flex items-center">
-                    <BookOpen className="h-4 w-4 mr-2 text-secondary-text" />
-                    <span>{selectedCourse.modules?.length || 0} modules</span>
+                  <div className="flex items-center p-3 bg-gray-50 rounded-lg">
+                    <BookOpen className="h-5 w-5 mr-2 text-accent-blue" />
+                    <div>
+                      <div className="font-medium">{moduleCount} modules</div>
+                      <div className="text-xs text-gray-500">Total Modules</div>
+                    </div>
                   </div>
-                  <div className="flex items-center">
-                    <Users className="h-4 w-4 mr-2 text-secondary-text" />
-                    <span>{selectedCourse.enrolledUsers?.length || 0} enrolled</span>
+                  <div className="flex items-center p-3 bg-gray-50 rounded-lg">
+                    <Play className="h-5 w-5 mr-2 text-accent-blue" />
+                    <div>
+                      <div className="font-medium">{reelCount} videos</div>
+                      <div className="text-xs text-gray-500">Video Reels</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center p-3 bg-gray-50 rounded-lg">
+                    <HelpCircle className="h-5 w-5 mr-2 text-accent-blue" />
+                    <div>
+                      <div className="font-medium">{quizCount} quizzes</div>
+                      <div className="text-xs text-gray-500">Assessments</div>
+                    </div>
                   </div>
                 </div>
+                
                 <div className="pt-4">
-                  <h3 className="font-semibold mb-2">Course Modules</h3>
-                  <div className="space-y-2">
+                  <h3 className="text-lg font-semibold mb-4">Course Modules</h3>
+                  <div className="space-y-3">
                     {courseBuilderState.modules.map((module, index) => (
-                      <div key={module.id} className="flex items-center p-3 bg-gray-50 rounded-lg">
-                        <span className="text-sm font-medium text-gray-500 mr-3">#{index + 1}</span>
-                        <div className="flex-1">
-                          <h4 className="font-medium">{module.title}</h4>
-                          <p className="text-sm text-gray-500 capitalize">{module.type}</p>
+                      <div key={module.id} className="flex items-center p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
+                        <div className="flex items-center justify-center w-8 h-8 bg-accent-blue text-white rounded-full text-sm font-medium mr-4">
+                          {index + 1}
                         </div>
-                        <div className="text-sm text-gray-500">
-                          {module.estimatedDuration > 0 ? `${Math.floor(module.estimatedDuration / 60)}m` : 'N/A'}
+                        <div className="flex-1">
+                          <h4 className="font-medium text-primary-text">{module.title}</h4>
+                          <div className="flex items-center gap-4 mt-1">
+                            <Badge variant="outline" className="text-xs">
+                              {module.type}
+                            </Badge>
+                            {module.estimatedDuration > 0 && (
+                              <span className="text-sm text-secondary-text">
+                                {Math.floor(module.estimatedDuration / 60)}m
+                              </span>
+                            )}
+                            {module.isRequired && (
+                              <Badge variant="secondary" className="text-xs">
+                                Required
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
+
+                {selectedCourse.tags && selectedCourse.tags.length > 0 && (
+                  <div className="pt-4">
+                    <h3 className="text-lg font-semibold mb-3">Tags</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedCourse.tags.map((tag) => (
+                        <Badge key={tag} variant="secondary" className="px-3 py-1">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -533,11 +638,15 @@ export default function CourseBuilder() {
                 </Button>
                 <Button
                   onClick={handleCreateCourse}
-                  disabled={createCourseMutation.isPending || !courseBuilderState.course.title}
+                  disabled={isSaving || !courseBuilderState.course.title}
                   className="btn-primary"
                 >
-                  <Save className="h-4 w-4 mr-2" />
-                  {createCourseMutation.isPending ? 'Creating...' : 'Create Course'}
+                  {isSaving ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4 mr-2" />
+                  )}
+                  {isSaving ? 'Creating...' : 'Create Course'}
                 </Button>
               </div>
             </div>
@@ -571,8 +680,7 @@ export default function CourseBuilder() {
                             variant="ghost"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setSelectedCourse(course);
-                              setIsCreating(true);
+                              handleEditCourse(course);
                             }}
                             className="h-8 w-8 p-0 hover:bg-gray-100"
                           >
@@ -590,17 +698,35 @@ export default function CourseBuilder() {
                           >
                             <Play className="h-4 w-4" />
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              // Handle more actions
-                            }}
-                            className="h-8 w-8 p-0 hover:bg-gray-100"
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
+                          <div className="relative group">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 w-8 p-0 hover:bg-gray-100"
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                            <div className="absolute right-0 top-8 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCloneCourse(course);
+                                }}
+                                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100"
+                              >
+                                Clone Course
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteCourse(course.id);
+                                }}
+                                className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                              >
+                                Archive Course
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </CardHeader>
