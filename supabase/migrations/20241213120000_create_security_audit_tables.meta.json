@@ -1,0 +1,18 @@
+{
+  "migration_name": "20241213120000_create_security_audit_tables",
+  "created_at": "2024-12-13T12:00:00Z",
+  "description": "Create comprehensive security audit tables and functions for monitoring, logging, and compliance",
+  "tables_created": [
+    "audit_logs",
+    "security_events", 
+    "user_sessions",
+    "failed_login_attempts",
+    "data_encryption_keys"
+  ],
+  "tables_modified": [],
+  "tables_deleted": [],
+  "breaking_changes": false,
+  "rollback_sql": "DROP TABLE IF EXISTS data_encryption_keys CASCADE; DROP TABLE IF EXISTS failed_login_attempts CASCADE; DROP TABLE IF EXISTS user_sessions CASCADE; DROP TABLE IF EXISTS security_events CASCADE; DROP TABLE IF EXISTS audit_logs CASCADE; DROP FUNCTION IF EXISTS log_audit_event CASCADE; DROP FUNCTION IF EXISTS log_security_event CASCADE; DROP FUNCTION IF EXISTS check_rate_limit CASCADE; DROP FUNCTION IF EXISTS record_failed_login CASCADE; DROP FUNCTION IF EXISTS clear_failed_logins CASCADE; DROP FUNCTION IF EXISTS audit_user_changes CASCADE;",
+  "estimated_rows": 0,
+  "requires_downtime": false
+}

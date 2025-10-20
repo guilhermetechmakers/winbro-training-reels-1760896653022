@@ -1,0 +1,19 @@
+{
+  "migration_name": "20241213130000_create_rbac_system",
+  "created_at": "2024-12-13T13:00:00Z",
+  "description": "Create comprehensive role-based access control system with roles, permissions, and customer scoping",
+  "tables_created": [
+    "roles",
+    "permissions",
+    "role_permissions",
+    "user_roles",
+    "resource_permissions",
+    "customer_scopes"
+  ],
+  "tables_modified": [],
+  "tables_deleted": [],
+  "breaking_changes": false,
+  "rollback_sql": "DROP TABLE IF EXISTS resource_permissions CASCADE; DROP TABLE IF EXISTS user_roles CASCADE; DROP TABLE IF EXISTS role_permissions CASCADE; DROP TABLE IF EXISTS customer_scopes CASCADE; DROP TABLE IF EXISTS permissions CASCADE; DROP TABLE IF EXISTS roles CASCADE; DROP FUNCTION IF EXISTS user_has_permission CASCADE; DROP FUNCTION IF EXISTS get_user_permissions CASCADE; DROP FUNCTION IF EXISTS user_has_customer_scope CASCADE; DROP FUNCTION IF EXISTS assign_user_role CASCADE;",
+  "estimated_rows": 0,
+  "requires_downtime": false
+}
