@@ -1,0 +1,12 @@
+{
+  "migration_name": "20241221120000_create_user_management_tables",
+  "created_at": "2024-12-21T12:00:00Z",
+  "description": "Create comprehensive user management tables including roles, sessions, activity logging, and admin audit trails",
+  "tables_created": ["user_roles", "user_sessions", "user_activity_log", "admin_audit_log", "user_invitations", "seat_requests"],
+  "tables_modified": [],
+  "tables_deleted": [],
+  "breaking_changes": false,
+  "rollback_sql": "DROP TABLE IF EXISTS seat_requests CASCADE; DROP TABLE IF EXISTS user_invitations CASCADE; DROP TABLE IF EXISTS admin_audit_log CASCADE; DROP TABLE IF EXISTS user_activity_log CASCADE; DROP TABLE IF EXISTS user_sessions CASCADE; DROP TABLE IF EXISTS user_roles CASCADE;",
+  "estimated_rows": 0,
+  "requires_downtime": false
+}
