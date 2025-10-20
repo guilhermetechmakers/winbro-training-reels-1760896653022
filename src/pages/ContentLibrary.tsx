@@ -1,24 +1,33 @@
 /**
- * Content Library page with integrated search functionality
+ * Enhanced Content Library page with modern design patterns
  * Generated: 2024-12-13T18:00:00Z
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-// import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   SearchBar, 
   FilterSidebar, 
-  SearchResultsGrid 
+  SearchResultsGrid
 } from '@/components/search';
 import { useSearch } from '@/hooks/useSearch';
 import { 
-  Filter, 
   Upload, 
   X,
-  ArrowLeft
+  ArrowLeft,
+  Grid3X3,
+  BookOpen,
+  PlayCircle,
+  BookmarkPlus,
+  Tag,
+  Building,
+  Wrench,
+  User,
+  Filter
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { SearchSuggestion } from '@/types/search';
@@ -29,6 +38,9 @@ export default function ContentLibrary() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [showBulkActions, setShowBulkActions] = useState(false);
+  const [activeTab, setActiveTab] = useState<'all' | 'reels' | 'courses' | 'bookmarks'>('all');
 
   const {
     searchState,
@@ -37,8 +49,6 @@ export default function ContentLibrary() {
     setFilters,
     setSort,
     setPage,
-    // setLimit,
-    // clearSearch,
     resetFilters,
     trackClick
   } = useSearch();
@@ -107,6 +117,32 @@ export default function ContentLibrary() {
     handleSearch();
   }, [resetFilters, handleSearch]);
 
+  // Handle item selection
+  const handleItemSelect = useCallback((itemId: string, selected: boolean) => {
+    if (selected) {
+      setSelectedItems(prev => [...prev, itemId]);
+    } else {
+      setSelectedItems(prev => prev.filter(id => id !== itemId));
+    }
+  }, []);
+
+  // Handle select all
+  const handleSelectAll = useCallback((selected: boolean) => {
+    if (selected) {
+      setSelectedItems(searchState.results.map(result => result.video_id));
+    } else {
+      setSelectedItems([]);
+    }
+  }, [searchState.results]);
+
+  // Handle bulk action
+  const handleBulkAction = useCallback((action: string) => {
+    console.log(`Bulk action: ${action} on items:`, selectedItems);
+    // Implement bulk actions here
+    setSelectedItems([]);
+    setShowBulkActions(false);
+  }, [selectedItems]);
+
   // Initialize search with URL query
   useEffect(() => {
     const urlQuery = searchParams.get('q');
@@ -126,10 +162,44 @@ export default function ContentLibrary() {
     }
   }, [searchState.query, searchState.filters, handleSearch]);
 
+  // Show bulk actions when items are selected
+  useEffect(() => {
+    setShowBulkActions(selectedItems.length > 0);
+  }, [selectedItems]);
+
+  // Filter results based on active tab
+  const filteredResults = useMemo(() => {
+    if (activeTab === 'all') return searchState.results;
+    if (activeTab === 'bookmarks') {
+      // Filter for bookmarked items (this would need to be implemented in the search)
+      return searchState.results.filter(result => result.bookmark_count > 0);
+    }
+    // For reels and courses, we'd need to distinguish between them
+    return searchState.results;
+  }, [searchState.results, activeTab]);
+
+  // Get active filters count
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (searchState.filters.tags?.length) count += searchState.filters.tags.length;
+    if (searchState.filters.machine_model) count++;
+    if (searchState.filters.process_type) count++;
+    if (searchState.filters.skill_level) count++;
+    if (searchState.filters.status) count++;
+    if (searchState.filters.visibility) count++;
+    if (searchState.filters.duration_range) count++;
+    if (searchState.filters.date_range?.start || searchState.filters.date_range?.end) count++;
+    return count;
+  }, [searchState.filters]);
+
   return (
     <div className="min-h-screen bg-main-bg">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white shadow-sm border-b"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
@@ -154,9 +224,9 @@ export default function ContentLibrary() {
               >
                 <Filter className="h-4 w-4 mr-2" />
                 Filters
-                {searchState.facets.length > 0 && (
+                {activeFiltersCount > 0 && (
                   <Badge variant="secondary" className="ml-2">
-                    {searchState.facets.length}
+                    {activeFiltersCount}
                   </Badge>
                 )}
               </Button>
@@ -170,14 +240,20 @@ export default function ContentLibrary() {
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Search and Filters */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+        <div className="flex flex-col lg:flex-row gap-4 sm:gap-8">
+          {/* Main Content */}
           <div className="flex-1 space-y-6">
-            {/* Search Bar */}
-            <div className="space-y-4">
+            {/* Search and Tabs */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="space-y-4"
+            >
+              {/* Search Bar */}
               <SearchBar
                 query={searchState.query}
                 onQueryChange={setQuery}
@@ -187,88 +263,137 @@ export default function ContentLibrary() {
                 autoFocus={!isMobile}
               />
               
+              {/* Content Type Tabs */}
+              <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)}>
+                <TabsList className="grid w-full grid-cols-4">
+                  <TabsTrigger value="all" className="flex items-center space-x-2">
+                    <Grid3X3 className="h-4 w-4" />
+                    <span>All Content</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="reels" className="flex items-center space-x-2">
+                    <PlayCircle className="h-4 w-4" />
+                    <span>Reels</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="courses" className="flex items-center space-x-2">
+                    <BookOpen className="h-4 w-4" />
+                    <span>Courses</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="bookmarks" className="flex items-center space-x-2">
+                    <BookmarkPlus className="h-4 w-4" />
+                    <span>Bookmarks</span>
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+
               {/* Active Filters */}
-              {Object.keys(searchState.filters).length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {searchState.filters.tags?.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="flex items-center gap-1">
-                      {tag}
-                      <button
-                        onClick={() => handleFilterChange({ 
-                          tags: searchState.filters.tags?.filter(t => t !== tag) 
-                        })}
-                        className="ml-1 hover:bg-gray-300 rounded-full p-0.5"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                  {searchState.filters.machine_model && (
-                    <Badge variant="secondary" className="flex items-center gap-1">
-                      Machine: {searchState.filters.machine_model}
-                      <button
-                        onClick={() => handleFilterChange({ machine_model: undefined })}
-                        className="ml-1 hover:bg-gray-300 rounded-full p-0.5"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  )}
-                  {searchState.filters.process_type && (
-                    <Badge variant="secondary" className="flex items-center gap-1">
-                      Process: {searchState.filters.process_type}
-                      <button
-                        onClick={() => handleFilterChange({ process_type: undefined })}
-                        className="ml-1 hover:bg-gray-300 rounded-full p-0.5"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  )}
-                  {searchState.filters.skill_level && (
-                    <Badge variant="secondary" className="flex items-center gap-1">
-                      Skill: {searchState.filters.skill_level}
-                      <button
-                        onClick={() => handleFilterChange({ skill_level: undefined })}
-                        className="ml-1 hover:bg-gray-300 rounded-full p-0.5"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleResetFilters}
-                    className="text-secondary-text hover:text-primary-text"
+              <AnimatePresence>
+                {Object.keys(searchState.filters).length > 0 && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="flex flex-wrap gap-2"
                   >
-                    Clear all
-                  </Button>
-                </div>
-              )}
-            </div>
+                    {searchState.filters.tags?.map((tag) => (
+                      <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+                        <Tag className="h-3 w-3" />
+                        {tag}
+                        <button
+                          onClick={() => handleFilterChange({ 
+                            tags: searchState.filters.tags?.filter(t => t !== tag) 
+                          })}
+                          className="ml-1 hover:bg-gray-300 rounded-full p-0.5"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                    {searchState.filters.machine_model && (
+                      <Badge variant="secondary" className="flex items-center gap-1">
+                        <Building className="h-3 w-3" />
+                        Machine: {searchState.filters.machine_model}
+                        <button
+                          onClick={() => handleFilterChange({ machine_model: undefined })}
+                          className="ml-1 hover:bg-gray-300 rounded-full p-0.5"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    )}
+                    {searchState.filters.process_type && (
+                      <Badge variant="secondary" className="flex items-center gap-1">
+                        <Wrench className="h-3 w-3" />
+                        Process: {searchState.filters.process_type}
+                        <button
+                          onClick={() => handleFilterChange({ process_type: undefined })}
+                          className="ml-1 hover:bg-gray-300 rounded-full p-0.5"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    )}
+                    {searchState.filters.skill_level && (
+                      <Badge variant="secondary" className="flex items-center gap-1">
+                        <User className="h-3 w-3" />
+                        Skill: {searchState.filters.skill_level}
+                        <button
+                          onClick={() => handleFilterChange({ skill_level: undefined })}
+                          className="ml-1 hover:bg-gray-300 rounded-full p-0.5"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleResetFilters}
+                      className="text-secondary-text hover:text-primary-text"
+                    >
+                      Clear all
+                    </Button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
 
             {/* Search Results */}
-            <SearchResultsGrid
-              results={searchState.results}
-              loading={searchState.loading}
-              error={searchState.error?.message || null}
-              viewMode={viewMode}
-              onViewModeChange={handleViewModeChange}
-              sortBy={searchState.sort_by}
-              sortOrder={searchState.sort_order}
-              onSortChange={handleSortChange}
-              pagination={searchState.pagination}
-              onPageChange={handlePageChange}
-              onResultClick={handleResultClick}
-            />
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <SearchResultsGrid
+                results={filteredResults}
+                loading={searchState.loading}
+                error={searchState.error?.message || null}
+                viewMode={viewMode}
+                onViewModeChange={handleViewModeChange}
+                sortBy={searchState.sort_by}
+                sortOrder={searchState.sort_order}
+                onSortChange={handleSortChange}
+                pagination={searchState.pagination}
+                onPageChange={handlePageChange}
+                onResultClick={handleResultClick}
+                selectedItems={selectedItems}
+                onItemSelect={handleItemSelect}
+                onSelectAll={handleSelectAll}
+                showBulkActions={showBulkActions}
+                onBulkAction={handleBulkAction}
+              />
+            </motion.div>
           </div>
 
           {/* Filter Sidebar */}
-          <div className={cn(
-            "lg:w-80",
-            showFilters ? "block" : "hidden lg:block"
-          )}>
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3 }}
+            className={cn(
+              "w-full lg:w-80",
+              showFilters ? "block" : "hidden lg:block"
+            )}
+          >
             <FilterSidebar
               filters={searchState.filters}
               facets={searchState.facets}
@@ -277,26 +402,38 @@ export default function ContentLibrary() {
               isOpen={showFilters}
               onToggle={() => setShowFilters(!showFilters)}
             />
-          </div>
+          </motion.div>
         </div>
       </div>
 
       {/* Mobile Filter Overlay */}
-      {showFilters && isMobile && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setShowFilters(false)} />
-          <div className="absolute right-0 top-0 h-full w-80 bg-white shadow-xl">
-            <FilterSidebar
-              filters={searchState.filters}
-              facets={searchState.facets}
-              onFiltersChange={handleFilterChange}
-              onResetFilters={handleResetFilters}
-              isOpen={showFilters}
-              onToggle={() => setShowFilters(false)}
-            />
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {showFilters && isMobile && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 lg:hidden"
+          >
+            <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setShowFilters(false)} />
+            <motion.div 
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              className="absolute right-0 top-0 h-full w-full max-w-sm bg-white shadow-xl"
+            >
+              <FilterSidebar
+                filters={searchState.filters}
+                facets={searchState.facets}
+                onFiltersChange={handleFilterChange}
+                onResetFilters={handleResetFilters}
+                isOpen={showFilters}
+                onToggle={() => setShowFilters(false)}
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

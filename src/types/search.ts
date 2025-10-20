@@ -24,6 +24,9 @@ export interface SearchFilters {
   status?: 'draft' | 'pending_review' | 'published' | 'archived' | 'rejected';
   visibility?: 'private' | 'public' | 'organization';
   author_id?: string;
+  content_type?: 'reel' | 'course' | 'quiz';
+  min_views?: number;
+  min_bookmarks?: number;
   date_range?: {
     start: string;
     end: string;
