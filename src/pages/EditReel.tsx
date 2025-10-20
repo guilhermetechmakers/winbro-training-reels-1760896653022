@@ -1,9 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'motion/react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,197 +7,171 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
 import { 
-  Save, 
   ArrowLeft, 
+  Save, 
+  Eye, 
+  Download, 
   Trash2, 
   RefreshCw, 
-  Eye, 
-  Download,
-  Share,
-  FileVideo,
   Clock,
-  User,
-  Calendar,
+  Tag,
+  Play,
   AlertCircle,
-  CheckCircle
 } from 'lucide-react';
-
-// Form validation schema
-const videoEditSchema = z.object({
-  title: z.string().min(1, 'Title is required').max(100, 'Title must be less than 100 characters'),
-  description: z.string().max(500, 'Description must be less than 500 characters').optional(),
-  machineModel: z.string().optional(),
-  processType: z.string().optional(),
-  tooling: z.string().optional(),
-  skillLevel: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
-  tags: z.array(z.string()).optional(),
-  visibility: z.enum(['private', 'public', 'organization']).default('private'),
-  status: z.enum(['draft', 'pending_review', 'published', 'archived']).default('draft'),
-  autoTranscribe: z.boolean().default(true),
-  allowDownload: z.boolean().default(false),
-  allowComments: z.boolean().default(true)
-});
-
-type VideoEditFormData = z.infer<typeof videoEditSchema>;
+import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import { useReels, useUpdateReel, useDeleteReel } from '@/hooks/useReels';
 
 export default function EditReel() {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [activeTab, setActiveTab] = useState('metadata');
+  const [hasChanges, setHasChanges] = useState(false);
 
-  // Mock video data
-  const [video, setVideo] = useState({
-    id: id,
-    title: "CNC Mill Setup - Tool Change",
-    description: "Step-by-step guide for safely changing tools on the CNC mill, including proper setup and safety checks.",
-    duration: 28,
-    file_size: 15728640, // 15MB
-    mime_type: "video/mp4",
-    video_url: "https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4",
-    thumbnail_url: "https://via.placeholder.com/1280x720/2563EB/FFFFFF?text=Video+Thumbnail",
-    processing_status: "completed",
-    processing_progress: 100,
-    machine_model: "CNC Mill 2000",
-    process_type: "Tool Change",
-    tooling: "Carbide Inserts",
-    skill_level: "intermediate",
-    tags: ["CNC", "Setup", "Tool Change"],
-    visibility: "private",
-    status: "published",
-    view_count: 1247,
-    download_count: 23,
-    bookmark_count: 45,
-    created_at: "2024-12-13T10:00:00Z",
-    updated_at: "2024-12-13T10:00:00Z",
-    author: {
-      id: "1",
-      name: "John Smith",
-      role: "Senior Engineer"
-    }
+  // API hooks
+  const { data: reels, isLoading } = useReels();
+  const updateReelMutation = useUpdateReel();
+  const deleteReelMutation = useDeleteReel();
+
+  // Find the current reel
+  const reel = reels?.find(r => r.id === id);
+
+  // Form state
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    machineModel: '',
+    processType: '',
+    tooling: '',
+    skillLevel: 'beginner' as 'beginner' | 'intermediate' | 'advanced',
+    visibility: 'private' as 'private' | 'organization' | 'public',
+    tags: [] as string[],
+    customerScope: [] as string[],
   });
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    setValue,
-    formState: { errors, isDirty }
-  } = useForm<VideoEditFormData>({
-    resolver: zodResolver(videoEditSchema),
-    defaultValues: {
-      title: video.title,
-      description: video.description,
-      machineModel: video.machine_model,
-      processType: video.process_type,
-      tooling: video.tooling,
-      skillLevel: video.skill_level as 'beginner' | 'intermediate' | 'advanced',
-      tags: video.tags,
-      visibility: video.visibility as 'private' | 'public' | 'organization',
-      status: video.status as 'draft' | 'pending_review' | 'published' | 'archived',
-      autoTranscribe: true,
-      allowDownload: false,
-      allowComments: true
-    }
+  // Processing options
+  const [processingOptions, setProcessingOptions] = useState({
+    autoTranscribe: true,
+    autoTagging: true,
+    generateThumbnails: true,
   });
 
-  const watchedTags = watch('tags') || [];
-
-  // Format file size
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  // Format time
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  // Handle tag management
-  const addTag = (tag: string) => {
-    if (tag.trim() && !watchedTags.includes(tag.trim())) {
-      setValue('tags', [...watchedTags, tag.trim()]);
+  // Initialize form data when reel loads
+  useEffect(() => {
+    if (reel) {
+      setFormData({
+        title: reel.title,
+        description: reel.description,
+        machineModel: reel.machineModel || '',
+        processType: reel.processType || '',
+        tooling: reel.tooling || '',
+        skillLevel: reel.skillLevel || 'beginner',
+        visibility: reel.visibility || 'private',
+        tags: reel.tags || [],
+        customerScope: reel.customerScope || [],
+      });
     }
+  }, [reel]);
+
+  // Handle form changes
+  const handleFormChange = (field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    setHasChanges(true);
   };
 
-  const removeTag = (tagToRemove: string) => {
-    setValue('tags', watchedTags.filter(tag => tag !== tagToRemove));
+  // Handle processing options change
+  const handleProcessingOptionsChange = (field: string, value: boolean) => {
+    setProcessingOptions(prev => ({ ...prev, [field]: value }));
+    setHasChanges(true);
   };
 
-  // Handle form submission
-  const onSubmit = async (data: VideoEditFormData) => {
-    setIsSaving(true);
-    setSaveError(null);
+  // Handle tags change
+  const handleTagsChange = (tags: string[]) => {
+    setFormData(prev => ({ ...prev, tags }));
+    setHasChanges(true);
+  };
+
+  // Save changes
+  const handleSave = useCallback(async () => {
+    if (!reel) return;
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await updateReelMutation.mutateAsync({
+        id: reel.id,
+        updates: {
+          title: formData.title,
+          description: formData.description,
+          machineModel: formData.machineModel,
+          processType: formData.processType,
+          tooling: formData.tooling,
+          skillLevel: formData.skillLevel,
+          visibility: formData.visibility,
+          tags: formData.tags,
+          customerScope: formData.customerScope,
+        },
+      });
       
-      // Update video data
-      setVideo(prev => ({
-        ...prev,
-        ...data,
-        updated_at: new Date().toISOString()
-      }));
-
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
+      setHasChanges(false);
+      toast.success('Reel updated successfully');
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : 'Failed to save changes');
-    } finally {
-      setIsSaving(false);
+      toast.error('Failed to update reel');
+      console.error('Error updating reel:', error);
     }
-  };
+  }, [reel, formData, updateReelMutation]);
 
-  // Handle reprocessing
-  const handleReprocess = async () => {
-    try {
-      // Simulate reprocessing
-      console.log('Reprocessing video...');
-    } catch (error) {
-      console.error('Reprocessing failed:', error);
-    }
-  };
+  // Delete reel
+  const handleDelete = useCallback(async () => {
+    if (!reel) return;
 
-  // Handle delete
-  const handleDelete = async () => {
-    if (window.confirm('Are you sure you want to delete this video? This action cannot be undone.')) {
+    if (window.confirm('Are you sure you want to delete this reel? This action cannot be undone.')) {
       try {
-        // Simulate delete
-        console.log('Deleting video...');
-        navigate('/content-library');
+        await deleteReelMutation.mutateAsync(reel.id);
+        toast.success('Reel deleted successfully');
+        navigate('/library');
       } catch (error) {
-        console.error('Delete failed:', error);
+        toast.error('Failed to delete reel');
+        console.error('Error deleting reel:', error);
       }
     }
-  };
+  }, [reel, deleteReelMutation, navigate]);
 
-  useEffect(() => {
-    // Simulate loading video data
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
+  // Reprocess video
+  const handleReprocess = useCallback(async () => {
+    if (!reel) return;
 
-    return () => clearTimeout(timer);
-  }, []);
+    try {
+      // TODO: Implement reprocessing API call
+      toast.success('Reprocessing started');
+    } catch (error) {
+      toast.error('Failed to start reprocessing');
+      console.error('Error reprocessing:', error);
+    }
+  }, [reel]);
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-main-bg flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-blue mx-auto mb-4"></div>
-          <p className="text-secondary-text">Loading video...</p>
+          <p className="text-secondary-text">Loading reel...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!reel) {
+    return (
+      <div className="min-h-screen bg-main-bg flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-primary-text mb-2">Reel Not Found</h2>
+          <p className="text-secondary-text mb-6">The reel you're looking for doesn't exist or has been deleted.</p>
+          <Button onClick={() => navigate('/library')} className="btn-primary">
+            Back to Library
+          </Button>
         </div>
       </div>
     );
@@ -212,60 +182,58 @@ export default function EditReel() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center gap-4 mb-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate(-1)}
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
-            <h1 className="text-3xl font-bold text-primary-text">Edit Video</h1>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/library')}
+                className="flex items-center gap-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to Library
+              </Button>
+              <div>
+                <h1 className="text-3xl font-bold text-primary-text mb-2">Edit Reel</h1>
+                <p className="text-secondary-text">Manage your training video content and settings</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {hasChanges && (
+                <Badge variant="outline" className="text-amber-600 border-amber-200">
+                  Unsaved changes
+                </Badge>
+              )}
+              <Button
+                onClick={handleSave}
+                disabled={!hasChanges || updateReelMutation.isPending}
+                className="btn-primary"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {updateReelMutation.isPending ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
           </div>
-          <p className="text-secondary-text">Update metadata, access controls, and processing settings</p>
         </div>
-
-        {/* Success/Error Messages */}
-        {saveSuccess && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center"
-          >
-            <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-            <span className="text-green-700">Changes saved successfully!</span>
-          </motion.div>
-        )}
-
-        {saveError && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center"
-          >
-            <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
-            <span className="text-red-700">{saveError}</span>
-          </motion.div>
-        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2">
-            <Tabs value="metadata" onValueChange={() => {}} className="space-y-6">
-              <TabsList className="grid w-full grid-cols-3">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="metadata">Metadata</TabsTrigger>
-                <TabsTrigger value="access">Access Control</TabsTrigger>
                 <TabsTrigger value="processing">Processing</TabsTrigger>
+                <TabsTrigger value="access">Access</TabsTrigger>
+                <TabsTrigger value="analytics">Analytics</TabsTrigger>
               </TabsList>
 
               {/* Metadata Tab */}
               <TabsContent value="metadata" className="space-y-6">
-                <Card>
+                <Card className="card">
                   <CardHeader>
-                    <CardTitle>Video Information</CardTitle>
+                    <CardTitle>Basic Information</CardTitle>
                     <CardDescription>
-                      Update the basic information about your video
+                      Update the basic information about your training reel
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -273,25 +241,21 @@ export default function EditReel() {
                       <Label htmlFor="title">Title *</Label>
                       <Input
                         id="title"
-                        {...register('title')}
-                        className={errors.title ? 'border-red-500' : ''}
+                        value={formData.title}
+                        onChange={(e) => handleFormChange('title', e.target.value)}
+                        placeholder="Enter video title"
                       />
-                      {errors.title && (
-                        <p className="text-sm text-red-500 mt-1">{errors.title.message}</p>
-                      )}
                     </div>
-
+                    
                     <div>
                       <Label htmlFor="description">Description</Label>
                       <Textarea
                         id="description"
-                        {...register('description')}
+                        value={formData.description}
+                        onChange={(e) => handleFormChange('description', e.target.value)}
                         rows={3}
-                        className={errors.description ? 'border-red-500' : ''}
+                        placeholder="Describe what this video demonstrates"
                       />
-                      {errors.description && (
-                        <p className="text-sm text-red-500 mt-1">{errors.description.message}</p>
-                      )}
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -299,14 +263,18 @@ export default function EditReel() {
                         <Label htmlFor="machineModel">Machine Model</Label>
                         <Input
                           id="machineModel"
-                          {...register('machineModel')}
+                          value={formData.machineModel}
+                          onChange={(e) => handleFormChange('machineModel', e.target.value)}
+                          placeholder="e.g., Winbro 2000"
                         />
                       </div>
                       <div>
                         <Label htmlFor="processType">Process Type</Label>
                         <Input
                           id="processType"
-                          {...register('processType')}
+                          value={formData.processType}
+                          onChange={(e) => handleFormChange('processType', e.target.value)}
+                          placeholder="e.g., Grinding, Polishing"
                         />
                       </div>
                     </div>
@@ -316,12 +284,17 @@ export default function EditReel() {
                         <Label htmlFor="tooling">Tooling</Label>
                         <Input
                           id="tooling"
-                          {...register('tooling')}
+                          value={formData.tooling}
+                          onChange={(e) => handleFormChange('tooling', e.target.value)}
+                          placeholder="e.g., Diamond wheel, Abrasive"
                         />
                       </div>
                       <div>
                         <Label htmlFor="skillLevel">Skill Level</Label>
-                        <Select onValueChange={(value) => setValue('skillLevel', value as any)}>
+                        <Select
+                          value={formData.skillLevel}
+                          onValueChange={(value) => handleFormChange('skillLevel', value)}
+                        >
                           <SelectTrigger>
                             <SelectValue placeholder="Select skill level" />
                           </SelectTrigger>
@@ -335,73 +308,140 @@ export default function EditReel() {
                     </div>
 
                     <div>
-                      <Label>Tags</Label>
-                      <div className="space-y-2">
-                        <div className="flex gap-2">
-                          <Input
-                            placeholder="Add a tag"
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                                addTag(e.currentTarget.value);
+                      <Label htmlFor="tags">Tags</Label>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {formData.tags.map((tag, index) => (
+                          <Badge
+                            key={index}
+                            variant="secondary"
+                            className="flex items-center gap-1"
+                          >
+                            {tag}
+                            <button
+                              onClick={() => {
+                                const newTags = formData.tags.filter((_, i) => i !== index);
+                                handleTagsChange(newTags);
+                              }}
+                              className="ml-1 hover:bg-gray-300 rounded-full p-0.5"
+                            >
+                              ×
+                            </button>
+                          </Badge>
+                        ))}
+                        <Input
+                          placeholder="Add tag..."
+                          className="w-32"
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              const newTag = e.currentTarget.value.trim();
+                              if (newTag && !formData.tags.includes(newTag)) {
+                                handleTagsChange([...formData.tags, newTag]);
                                 e.currentTarget.value = '';
                               }
-                            }}
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              const input = document.querySelector('input[placeholder="Add a tag"]') as HTMLInputElement;
-                              if (input) {
-                                addTag(input.value);
-                                input.value = '';
-                              }
-                            }}
-                          >
-                            Add
-                          </Button>
-                        </div>
-                        {watchedTags.length > 0 && (
-                          <div className="flex flex-wrap gap-2">
-                            {watchedTags.map((tag) => (
-                              <Badge
-                                key={tag}
-                                variant="secondary"
-                                className="flex items-center gap-1"
-                              >
-                                {tag}
-                                <button
-                                  type="button"
-                                  onClick={() => removeTag(tag)}
-                                  className="ml-1 hover:text-red-500"
-                                >
-                                  ×
-                                </button>
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
+                            }
+                          }}
+                        />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               </TabsContent>
 
-              {/* Access Control Tab */}
-              <TabsContent value="access" className="space-y-6">
-                <Card>
+              {/* Processing Tab */}
+              <TabsContent value="processing" className="space-y-6">
+                <Card className="card">
                   <CardHeader>
-                    <CardTitle>Access Control</CardTitle>
+                    <CardTitle>Processing Options</CardTitle>
                     <CardDescription>
-                      Control who can view and access this video
+                      Configure how your video is processed and analyzed
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="autoTranscribe">Auto-Transcribe</Label>
+                        <p className="text-xs text-secondary-text">
+                          Automatically generate transcript from audio
+                        </p>
+                      </div>
+                      <Switch
+                        id="autoTranscribe"
+                        checked={processingOptions.autoTranscribe}
+                        onCheckedChange={(checked) => handleProcessingOptionsChange('autoTranscribe', checked)}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="autoTagging">Auto-Tagging</Label>
+                        <p className="text-xs text-secondary-text">
+                          AI-suggested tags based on content analysis
+                        </p>
+                      </div>
+                      <Switch
+                        id="autoTagging"
+                        checked={processingOptions.autoTagging}
+                        onCheckedChange={(checked) => handleProcessingOptionsChange('autoTagging', checked)}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="generateThumbnails">Generate Thumbnails</Label>
+                        <p className="text-xs text-secondary-text">
+                          Create multiple thumbnail options
+                        </p>
+                      </div>
+                      <Switch
+                        id="generateThumbnails"
+                        checked={processingOptions.generateThumbnails}
+                        onCheckedChange={(checked) => handleProcessingOptionsChange('generateThumbnails', checked)}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="card">
+                  <CardHeader>
+                    <CardTitle>Reprocess Video</CardTitle>
+                    <CardDescription>
+                      Reprocess your video with updated settings
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-secondary-text">
+                          This will re-run all processing jobs with current settings
+                        </p>
+                      </div>
+                      <Button
+                        onClick={handleReprocess}
+                        variant="outline"
+                        className="flex items-center gap-2"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                        Reprocess
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Access Tab */}
+              <TabsContent value="access" className="space-y-6">
+                <Card className="card">
+                  <CardHeader>
+                    <CardTitle>Visibility & Access</CardTitle>
+                    <CardDescription>
+                      Control who can view and access this reel
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
                       <Label htmlFor="visibility">Visibility</Label>
-                      <Select onValueChange={(value) => setValue('visibility', value as any)}>
+                      <Select
+                        value={formData.visibility}
+                        onValueChange={(value) => handleFormChange('visibility', value)}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Select visibility" />
                         </SelectTrigger>
@@ -414,42 +454,38 @@ export default function EditReel() {
                     </div>
 
                     <div>
-                      <Label htmlFor="status">Status</Label>
-                      <Select onValueChange={(value) => setValue('status', value as any)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="draft">Draft</SelectItem>
-                          <SelectItem value="pending_review">Pending Review</SelectItem>
-                          <SelectItem value="published">Published</SelectItem>
-                          <SelectItem value="archived">Archived</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Label htmlFor="allowDownload">Allow Download</Label>
-                          <p className="text-sm text-gray-500">Users can download this video</p>
-                        </div>
-                        <Switch
-                          id="allowDownload"
-                          checked={watch('allowDownload')}
-                          onCheckedChange={(checked) => setValue('allowDownload', checked)}
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Label htmlFor="allowComments">Allow Comments</Label>
-                          <p className="text-sm text-gray-500">Users can add comments and notes</p>
-                        </div>
-                        <Switch
-                          id="allowComments"
-                          checked={watch('allowComments')}
-                          onCheckedChange={(checked) => setValue('allowComments', checked)}
+                      <Label htmlFor="customerScope">Customer Scope</Label>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {formData.customerScope.map((customer, index) => (
+                          <Badge
+                            key={index}
+                            variant="secondary"
+                            className="flex items-center gap-1"
+                          >
+                            {customer}
+                            <button
+                              onClick={() => {
+                                const newScope = formData.customerScope.filter((_, i) => i !== index);
+                                handleFormChange('customerScope', newScope);
+                              }}
+                              className="ml-1 hover:bg-gray-300 rounded-full p-0.5"
+                            >
+                              ×
+                            </button>
+                          </Badge>
+                        ))}
+                        <Input
+                          placeholder="Add customer..."
+                          className="w-32"
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              const newCustomer = e.currentTarget.value.trim();
+                              if (newCustomer && !formData.customerScope.includes(newCustomer)) {
+                                handleFormChange('customerScope', [...formData.customerScope, newCustomer]);
+                                e.currentTarget.value = '';
+                              }
+                            }
+                          }}
                         />
                       </div>
                     </div>
@@ -457,49 +493,35 @@ export default function EditReel() {
                 </Card>
               </TabsContent>
 
-              {/* Processing Tab */}
-              <TabsContent value="processing" className="space-y-6">
-                <Card>
+              {/* Analytics Tab */}
+              <TabsContent value="analytics" className="space-y-6">
+                <Card className="card">
                   <CardHeader>
-                    <CardTitle>Processing Settings</CardTitle>
+                    <CardTitle>Video Analytics</CardTitle>
                     <CardDescription>
-                      Manage video processing and reprocessing options
+                      View performance metrics for this reel
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Label htmlFor="autoTranscribe">Auto-Transcribe</Label>
-                          <p className="text-sm text-gray-500">Automatically generate transcript</p>
-                        </div>
-                        <Switch
-                          id="autoTranscribe"
-                          checked={watch('autoTranscribe')}
-                          onCheckedChange={(checked) => setValue('autoTranscribe', checked)}
-                        />
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-primary-text">{reel.views}</div>
+                        <div className="text-sm text-secondary-text">Views</div>
                       </div>
-
-                      <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                        <div className="flex items-center">
-                          <AlertCircle className="h-5 w-5 text-yellow-500 mr-2" />
-                          <div>
-                            <h4 className="font-medium text-yellow-800">Reprocessing Required</h4>
-                            <p className="text-sm text-yellow-700">
-                              Some changes require reprocessing the video. This may take several minutes.
-                            </p>
-                          </div>
-                        </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-primary-text">0</div>
+                        <div className="text-sm text-secondary-text">Downloads</div>
                       </div>
-
-                      <Button
-                        variant="outline"
-                        onClick={handleReprocess}
-                        className="w-full"
-                      >
-                        <RefreshCw className="h-4 w-4 mr-2" />
-                        Reprocess Video
-                      </Button>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-primary-text">0</div>
+                        <div className="text-sm text-secondary-text">Bookmarks</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-primary-text">
+                          {Math.floor(reel.duration / 60)}m
+                        </div>
+                        <div className="text-sm text-secondary-text">Duration</div>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -510,104 +532,93 @@ export default function EditReel() {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Video Preview */}
-            <Card>
+            <Card className="card">
               <CardHeader>
-                <CardTitle>Video Preview</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Play className="h-5 w-5 text-accent-blue" />
+                  Video Preview
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
-                  <img
-                    src={video.thumbnail_url}
-                    alt={video.title}
-                    className="w-full h-full object-cover"
-                  />
+                <div className="aspect-video bg-gray-100 rounded-lg mb-4 flex items-center justify-center">
+                  {reel.thumbnailUrl ? (
+                    <img 
+                      src={reel.thumbnailUrl} 
+                      alt={reel.title}
+                      className="w-full h-full object-cover rounded-lg"
+                    />
+                  ) : (
+                    <Play className="h-12 w-12 text-gray-400" />
+                  )}
                 </div>
-                <div className="mt-4 space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <FileVideo className="h-4 w-4" />
-                    {formatFileSize(video.file_size)}
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-icon-gray" />
+                    <span className="text-secondary-text">
+                      {Math.floor(reel.duration / 60)}m {reel.duration % 60}s
+                    </span>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Clock className="h-4 w-4" />
-                    {formatTime(video.duration)}
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <User className="h-4 w-4" />
-                    {video.author.name}
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Calendar className="h-4 w-4" />
-                    {new Date(video.created_at).toLocaleDateString()}
+                  <div className="flex items-center gap-2">
+                    <Tag className="h-4 w-4 text-icon-gray" />
+                    <span className="text-secondary-text">
+                      {reel.tags.length} tags
+                    </span>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Video Stats */}
-            <Card>
+            {/* Status & Actions */}
+            <Card className="card">
               <CardHeader>
-                <CardTitle>Video Statistics</CardTitle>
+                <CardTitle>Status & Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-primary-text">{video.view_count.toLocaleString()}</div>
-                    <div className="text-sm text-gray-500">Views</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-primary-text">{video.download_count}</div>
-                    <div className="text-sm text-gray-500">Downloads</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-primary-text">{video.bookmark_count}</div>
-                    <div className="text-sm text-gray-500">Bookmarks</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-primary-text">100%</div>
-                    <div className="text-sm text-gray-500">Processed</div>
-                  </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-secondary-text">Status</span>
+                  <Badge 
+                    variant={reel.status === 'published' ? 'default' : 'secondary'}
+                    className={cn(
+                      'text-xs',
+                      reel.status === 'published' 
+                        ? 'bg-status-green text-white' 
+                        : 'bg-gray-100 text-gray-800'
+                    )}
+                  >
+                    {reel.status}
+                  </Badge>
                 </div>
-              </CardContent>
-            </Card>
 
-            {/* Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button
-                  onClick={handleSubmit(onSubmit)}
-                  disabled={!isDirty || isSaving}
-                  className="w-full"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  {isSaving ? 'Saving...' : 'Save Changes'}
-                </Button>
-                
-                <Button variant="outline" className="w-full">
-                  <Eye className="h-4 w-4 mr-2" />
-                  Preview
-                </Button>
-                
-                <Button variant="outline" className="w-full">
-                  <Share className="h-4 w-4 mr-2" />
-                  Share
-                </Button>
-                
-                <Button variant="outline" className="w-full">
-                  <Download className="h-4 w-4 mr-2" />
-                  Download
-                </Button>
-                
-                <Button
-                  variant="destructive"
-                  onClick={handleDelete}
-                  className="w-full"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Video
-                </Button>
+                <div className="space-y-2">
+                  <Button
+                    onClick={() => navigate(`/video/${reel.id}`)}
+                    variant="outline"
+                    className="w-full justify-start"
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    View Video
+                  </Button>
+                  <Button
+                    onClick={() => {/* TODO: Implement download */}}
+                    variant="outline"
+                    className="w-full justify-start"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download
+                  </Button>
+                </div>
+
+                <div className="pt-4 border-t">
+                  <Button
+                    onClick={handleDelete}
+                    variant="destructive"
+                    className="w-full justify-start"
+                    disabled={deleteReelMutation.isPending}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    {deleteReelMutation.isPending ? 'Deleting...' : 'Delete Reel'}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>

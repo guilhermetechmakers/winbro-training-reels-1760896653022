@@ -7,17 +7,46 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, CheckCircle, AlertCircle, Clock, FileVideo } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Upload, CheckCircle, AlertCircle, Clock, FileVideo, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import CaptureGuidance from '@/components/video-upload/CaptureGuidance';
+import AutoTaggingSuggestions from '@/components/video-upload/AutoTaggingSuggestions';
+import VideoPreview from '@/components/video-upload/VideoPreview';
 
 export default function UploadReel() {
-  const [uploadStep, setUploadStep] = useState<'upload' | 'metadata' | 'processing' | 'complete'>('upload');
+  const [uploadStep, setUploadStep] = useState<'upload' | 'guidance' | 'metadata' | 'preview' | 'processing' | 'complete'>('upload');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Metadata state
+  const [metadata, setMetadata] = useState({
+    title: '',
+    description: '',
+    machineModel: '',
+    processType: '',
+    tooling: '',
+    skillLevel: 'beginner' as 'beginner' | 'intermediate' | 'advanced',
+    visibility: 'private' as 'private' | 'organization' | 'public',
+    customerScope: [] as string[],
+    tags: [] as string[],
+  });
+
+  // Processing options
+  const [processingOptions, setProcessingOptions] = useState({
+    autoTranscribe: true,
+    autoTagging: true,
+    generateThumbnails: true,
+  });
+
+  // Video editing state (commented out for now)
+  // const [posterTime, setPosterTime] = useState<number | null>(null);
+  // const [trimStart, setTrimStart] = useState(0);
+  // const [trimEnd, setTrimEnd] = useState(0);
 
   // File validation
   const validateFile = (file: File): { valid: boolean; error?: string } => {
@@ -60,7 +89,8 @@ export default function UploadReel() {
 
     setSelectedFile(file);
     setUploadError(null);
-    setUploadStep('metadata');
+    setMetadata(prev => ({ ...prev, title: file.name.replace(/\.[^/.]+$/, '') }));
+    setUploadStep('guidance');
   }, []);
 
   // Handle drag and drop
@@ -101,6 +131,32 @@ export default function UploadReel() {
     }
   }, [handleFileSelect]);
 
+  // Handle metadata update
+  const handleMetadataChange = (field: string, value: any) => {
+    setMetadata(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Handle processing options change
+  const handleProcessingOptionsChange = (field: string, value: boolean) => {
+    setProcessingOptions(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Handle poster selection (commented out for now)
+  // const handlePosterSelect = (time: number) => {
+  //   setPosterTime(time);
+  // };
+
+  // Handle video trim (commented out for now)
+  // const handleVideoTrim = (start: number, end: number) => {
+  //   setTrimStart(start);
+  //   setTrimEnd(end);
+  // };
+
+  // Handle tags change
+  const handleTagsChange = (tags: string[]) => {
+    setMetadata(prev => ({ ...prev, tags }));
+  };
+
   // Handle upload
   const handleUpload = async () => {
     if (!selectedFile) return;
@@ -130,6 +186,25 @@ export default function UploadReel() {
     setUploadProgress(0);
     setIsUploading(false);
     setUploadError(null);
+    setMetadata({
+      title: '',
+      description: '',
+      machineModel: '',
+      processType: '',
+      tooling: '',
+      skillLevel: 'beginner',
+      visibility: 'private',
+      customerScope: [],
+      tags: [],
+    });
+    setProcessingOptions({
+      autoTranscribe: true,
+      autoTagging: true,
+      generateThumbnails: true,
+    });
+    // setPosterTime(null);
+    // setTrimStart(0);
+    // setTrimEnd(0);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -145,16 +220,18 @@ export default function UploadReel() {
 
         {/* Progress Steps */}
         <div className="mb-8">
-          <div className="flex items-center justify-center space-x-8">
+          <div className="flex items-center justify-center space-x-4 overflow-x-auto">
             {[
               { key: 'upload', label: 'Upload Video', icon: Upload },
+              { key: 'guidance', label: 'Capture Guide', icon: Eye },
               { key: 'metadata', label: 'Add Metadata', icon: FileVideo },
+              { key: 'preview', label: 'Preview', icon: Eye },
               { key: 'processing', label: 'Processing', icon: Clock },
               { key: 'complete', label: 'Complete', icon: CheckCircle }
             ].map((step, index) => {
               const Icon = step.icon;
               const isActive = uploadStep === step.key;
-              const isCompleted = ['upload', 'metadata', 'processing', 'complete'].indexOf(uploadStep) > index;
+              const isCompleted = ['upload', 'guidance', 'metadata', 'preview', 'processing', 'complete'].indexOf(uploadStep) > index;
               
               return (
                 <div key={step.key} className="flex items-center">
@@ -173,8 +250,8 @@ export default function UploadReel() {
                   }`}>
                     {step.label}
                   </span>
-                  {index < 3 && (
-                    <div className={`w-16 h-0.5 mx-4 ${
+                  {index < 5 && (
+                    <div className={`w-12 h-0.5 mx-2 ${
                       isCompleted ? 'bg-green-500' : 'bg-gray-300'
                     }`} />
                   )}
@@ -261,6 +338,20 @@ export default function UploadReel() {
           </motion.div>
         )}
 
+        {/* Capture Guidance Step */}
+        {uploadStep === 'guidance' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <CaptureGuidance
+              onComplete={() => setUploadStep('metadata')}
+              onReset={() => setUploadStep('upload')}
+            />
+          </motion.div>
+        )}
+
         {/* Metadata Step */}
         {uploadStep === 'metadata' && (
           <motion.div
@@ -303,7 +394,8 @@ export default function UploadReel() {
                     <Input
                       id="title"
                       placeholder="Enter video title"
-                      defaultValue={selectedFile?.name.replace(/\.[^/.]+$/, '')}
+                      value={metadata.title}
+                      onChange={(e) => handleMetadataChange('title', e.target.value)}
                     />
                   </div>
                   
@@ -313,6 +405,8 @@ export default function UploadReel() {
                       id="description"
                       rows={3}
                       placeholder="Describe what this video demonstrates"
+                      value={metadata.description}
+                      onChange={(e) => handleMetadataChange('description', e.target.value)}
                     />
                   </div>
 
@@ -322,6 +416,8 @@ export default function UploadReel() {
                       <Input
                         id="machineModel"
                         placeholder="e.g., Winbro 2000"
+                        value={metadata.machineModel}
+                        onChange={(e) => handleMetadataChange('machineModel', e.target.value)}
                       />
                     </div>
                     <div>
@@ -329,6 +425,8 @@ export default function UploadReel() {
                       <Input
                         id="processType"
                         placeholder="e.g., Grinding, Polishing"
+                        value={metadata.processType}
+                        onChange={(e) => handleMetadataChange('processType', e.target.value)}
                       />
                     </div>
                   </div>
@@ -339,11 +437,16 @@ export default function UploadReel() {
                       <Input
                         id="tooling"
                         placeholder="e.g., Diamond wheel, Abrasive"
+                        value={metadata.tooling}
+                        onChange={(e) => handleMetadataChange('tooling', e.target.value)}
                       />
                     </div>
                     <div>
                       <Label htmlFor="skillLevel">Skill Level</Label>
-                      <Select>
+                      <Select
+                        value={metadata.skillLevel}
+                        onValueChange={(value) => handleMetadataChange('skillLevel', value)}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Select skill level" />
                         </SelectTrigger>
@@ -358,7 +461,10 @@ export default function UploadReel() {
 
                   <div>
                     <Label htmlFor="visibility">Visibility</Label>
-                    <Select>
+                    <Select
+                      value={metadata.visibility}
+                      onValueChange={(value) => handleMetadataChange('visibility', value)}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select visibility" />
                       </SelectTrigger>
@@ -370,17 +476,94 @@ export default function UploadReel() {
                     </Select>
                   </div>
 
+                  {/* Processing Options */}
+                  <div className="space-y-4 pt-4 border-t">
+                    <h4 className="text-sm font-medium text-primary-text">Processing Options</h4>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label htmlFor="autoTranscribe">Auto-Transcribe</Label>
+                          <p className="text-xs text-secondary-text">
+                            Automatically generate transcript from audio
+                          </p>
+                        </div>
+                        <Switch
+                          id="autoTranscribe"
+                          checked={processingOptions.autoTranscribe}
+                          onCheckedChange={(checked) => handleProcessingOptionsChange('autoTranscribe', checked)}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label htmlFor="autoTagging">Auto-Tagging</Label>
+                          <p className="text-xs text-secondary-text">
+                            AI-suggested tags based on content analysis
+                          </p>
+                        </div>
+                        <Switch
+                          id="autoTagging"
+                          checked={processingOptions.autoTagging}
+                          onCheckedChange={(checked) => handleProcessingOptionsChange('autoTagging', checked)}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label htmlFor="generateThumbnails">Generate Thumbnails</Label>
+                          <p className="text-xs text-secondary-text">
+                            Create multiple thumbnail options
+                          </p>
+                        </div>
+                        <Switch
+                          id="generateThumbnails"
+                          checked={processingOptions.generateThumbnails}
+                          onCheckedChange={(checked) => handleProcessingOptionsChange('generateThumbnails', checked)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="flex justify-end space-x-2">
-                    <Button variant="outline" onClick={() => setUploadStep('upload')}>
+                    <Button variant="outline" onClick={() => setUploadStep('guidance')}>
                       Back
                     </Button>
-                    <Button onClick={handleUpload}>
-                      Upload Video
+                    <Button onClick={() => setUploadStep('preview')}>
+                      Next: Preview
                     </Button>
                   </div>
                 </div>
               </CardContent>
             </Card>
+
+            {/* Auto-Tagging Suggestions */}
+            {processingOptions.autoTagging && (
+              <AutoTaggingSuggestions
+                title={metadata.title}
+                description={metadata.description}
+                machineModel={metadata.machineModel}
+                processType={metadata.processType}
+                tooling={metadata.tooling}
+                skillLevel={metadata.skillLevel}
+                onTagsChange={handleTagsChange}
+                initialTags={metadata.tags}
+              />
+            )}
+          </motion.div>
+        )}
+
+        {/* Preview Step */}
+        {uploadStep === 'preview' && selectedFile && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <VideoPreview
+              videoFile={selectedFile}
+              onPosterSelect={() => {}} // handlePosterSelect
+              onTrim={() => {}} // handleVideoTrim
+              onConfirm={handleUpload}
+              onBack={() => setUploadStep('metadata')}
+            />
           </motion.div>
         )}
 

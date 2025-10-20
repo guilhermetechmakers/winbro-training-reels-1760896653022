@@ -13,7 +13,6 @@ import {
   Clock, 
   Users, 
   BookOpen, 
-  Video,
   AlertCircle,
   HelpCircle,
   Search,
@@ -30,93 +29,19 @@ import type { Course, CourseModule, Reel, CreateCourseInput, CourseBuilderState 
 import type { CourseQuiz, QuizQuestionForm } from '@/types/quiz';
 import { toast } from 'sonner';
 import CourseMetadataForm from '@/components/course-builder/CourseMetadataForm';
-import DragDropTimeline from '@/components/course-builder/DragDropTimeline';
+import EnhancedDragDropTimeline from '@/components/course-builder/EnhancedDragDropTimeline';
+import EnhancedReelLibrary from '@/components/course-builder/EnhancedReelLibrary';
 import PublishControlsComponent from '@/components/course-builder/PublishControls';
 import { QuizCard } from '@/components/quiz/QuizCard';
 import MainLayout from '@/components/layout/MainLayout';
 
 
-// Reel Library Component
-const ReelLibrary = ({ 
-  reels, 
-  onAddReel,
-  searchQuery,
-  onSearchChange
-}: { 
-  reels: Reel[]; 
-  onAddReel: (reel: Reel) => void;
-  searchQuery: string;
-  onSearchChange: (query: string) => void;
-}) => {
-  const filteredReels = reels.filter(reel =>
-    reel.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    reel.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    reel.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
-
-  return (
-    <Card className="card">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Video className="h-5 w-5 text-accent-blue" />
-          Reel Library
-        </CardTitle>
-        <CardDescription>Add reels to your course from your library</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="mb-4">
-          <Input
-            placeholder="Search reels..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full"
-          />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
-          {filteredReels.map((reel) => (
-            <motion.div
-              key={reel.id}
-              whileHover={{ scale: 1.02 }}
-              className="border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => onAddReel(reel)}
-            >
-              <div className="aspect-video bg-gray-100 rounded mb-3 flex items-center justify-center">
-                {reel.thumbnailUrl ? (
-                  <img 
-                    src={reel.thumbnailUrl} 
-                    alt={reel.title}
-                    className="w-full h-full object-cover rounded"
-                  />
-                ) : (
-                  <Video className="h-8 w-8 text-gray-400" />
-                )}
-              </div>
-              <h4 className="font-medium text-sm mb-1 line-clamp-2">{reel.title}</h4>
-              <p className="text-xs text-secondary-text mb-2 line-clamp-2">{reel.description}</p>
-              <div className="flex items-center justify-between text-xs text-secondary-text">
-                <span className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  {Math.floor(reel.duration / 60)}m
-                </span>
-                <Badge variant="outline" className="text-xs">
-                  {reel.status}
-                </Badge>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-        {filteredReels.length === 0 && (
-          <div className="text-center py-8 text-secondary-text">
-            <Video className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-            <p className="text-lg font-medium mb-2">No reels found</p>
-            <p className="text-sm">
-              {searchQuery ? 'Try adjusting your search terms' : 'Upload some reels to get started'}
-            </p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
+// Get added reel IDs for the enhanced library
+const getAddedReelIds = (modules: CourseModule[]): string[] => {
+  return modules
+    .filter(module => module.type === 'reel' && module.contentId)
+    .map(module => module.contentId!)
+    .filter(Boolean);
 };
 
 
@@ -542,9 +467,9 @@ export default function CourseBuilder() {
               </TabsContent>
               
               <TabsContent value="content" className="space-y-6">
-                <DragDropTimeline
+                <EnhancedDragDropTimeline
                   modules={courseBuilderState.modules}
-                  availableReels={[]}
+                  availableReels={reels || []}
                   onAddModule={handleAddModule}
                   onUpdateModule={handleUpdateModule}
                   onDeleteModule={handleDeleteModule}
@@ -552,9 +477,10 @@ export default function CourseBuilder() {
                   isPreviewMode={false}
                 />
                 
-                <ReelLibrary
+                <EnhancedReelLibrary
                   reels={reels || []}
                   onAddReel={handleAddReel}
+                  addedReelIds={getAddedReelIds(courseBuilderState.modules)}
                   searchQuery={reelSearchQuery}
                   onSearchChange={setReelSearchQuery}
                 />

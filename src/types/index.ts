@@ -26,6 +26,13 @@ export interface Reel {
   views: number;
   createdAt: string;
   updatedAt: string;
+  // Additional reel properties
+  machineModel?: string;
+  processType?: string;
+  tooling?: string;
+  skillLevel?: 'beginner' | 'intermediate' | 'advanced';
+  visibility?: 'private' | 'public' | 'organization';
+  customerScope?: string[];
 }
 
 export interface TranscriptSegment {
@@ -70,6 +77,9 @@ export interface Course {
   // Database fields
   userId: string;
   enrolledCount: number;
+  // Publishing fields
+  publishedAt?: string;
+  archivedAt?: string;
 }
 
 export interface CourseModule {
