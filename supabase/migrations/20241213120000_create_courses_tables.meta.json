@@ -1,0 +1,12 @@
+{
+  "migration_name": "20241213120000_create_courses_tables",
+  "created_at": "2024-12-13T12:00:00Z",
+  "description": "Create courses, course_modules, course_quizzes, course_enrollments, and course_completions tables for course builder functionality",
+  "tables_created": ["courses", "course_modules", "course_quizzes", "course_enrollments", "course_completions"],
+  "tables_modified": [],
+  "tables_deleted": [],
+  "breaking_changes": false,
+  "rollback_sql": "DROP TABLE IF EXISTS course_completions CASCADE; DROP TABLE IF EXISTS course_enrollments CASCADE; DROP TABLE IF EXISTS course_quizzes CASCADE; DROP TABLE IF EXISTS course_modules CASCADE; DROP TABLE IF EXISTS courses CASCADE;",
+  "estimated_rows": 0,
+  "requires_downtime": false
+}
