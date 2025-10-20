@@ -34,12 +34,15 @@ import {
   ArrowDownRight
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { useDashboardData, useSearchSuggestions, useActivityTracking } from '@/hooks/useDashboard';
+import { useDashboardData, useActivityTracking } from '@/hooks/useDashboard';
+import { useSearch, useSearchSuggestions } from '@/hooks/useSearch';
 import { cn } from '@/lib/utils';
 import type { 
-  AnalyticsData, 
-  SearchSuggestion 
+  AnalyticsData
 } from '@/types/dashboard';
+import type { 
+  SearchSuggestion 
+} from '@/types/search';
 
 // Types are now imported from @/types/dashboard
 
@@ -61,8 +64,11 @@ export default function Dashboard() {
     isLoading
   } = useDashboardData(user?.id || '', selectedTimeframe);
 
-  const { data: searchSuggestions = [] } = useSearchSuggestions(searchQuery);
+  const { data: searchSuggestionsData } = useSearchSuggestions(searchQuery);
   const { trackSearch } = useActivityTracking();
+  const { search: performSearch } = useSearch();
+  
+  const searchSuggestions = searchSuggestionsData?.suggestions || [];
 
   // Data is now fetched through the useDashboardData hook
 
@@ -115,16 +121,22 @@ export default function Dashboard() {
     }
   };
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim() && user?.id) {
       setIsSearching(true);
-      // Track search activity
-      trackSearch(user.id, searchQuery);
-      // Implement search functionality
-      console.log('Search query:', searchQuery);
-      // Navigate to search results or perform search
-      setTimeout(() => setIsSearching(false), 1000);
+      try {
+        // Track search activity
+        trackSearch(user.id, searchQuery);
+        // Perform search using the search hook
+        await performSearch({ query: searchQuery });
+        // Navigate to content library with search results
+        window.location.href = `/content-library?q=${encodeURIComponent(searchQuery)}`;
+      } catch (error) {
+        console.error('Search failed:', error);
+      } finally {
+        setIsSearching(false);
+      }
     }
   };
 
@@ -133,14 +145,15 @@ export default function Dashboard() {
     setShowSuggestions(value.length > 2);
   };
 
-  const handleSuggestionClick = (suggestion: SearchSuggestion) => {
-    setSearchQuery(suggestion.text);
+  const handleSuggestionClick = async (suggestion: SearchSuggestion) => {
+    setSearchQuery(suggestion.suggestion_value);
     setShowSuggestions(false);
     // Track search activity
     if (user?.id) {
-      trackSearch(user.id, suggestion.text);
+      trackSearch(user.id, suggestion.suggestion_value);
     }
-    console.log('Searching for:', suggestion.text);
+    // Navigate to content library with the suggestion
+    window.location.href = `/content-library?q=${encodeURIComponent(suggestion.suggestion_value)}`;
   };
 
   const getStatusColor = (status: string) => {
@@ -340,21 +353,21 @@ export default function Dashboard() {
                     >
                       {searchSuggestions.map((suggestion) => (
                         <button
-                          key={suggestion.id}
+                          key={`${suggestion.suggestion_type}-${suggestion.suggestion_value}`}
                           onClick={() => handleSuggestionClick(suggestion)}
                           className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center justify-between group"
                         >
                           <div className="flex items-center space-x-3">
                             <div className="w-2 h-2 rounded-full bg-accent-blue"></div>
-                            <span className="text-primary-text">{suggestion.text}</span>
+                            <span className="text-primary-text">{suggestion.suggestion_value}</span>
                           </div>
                           <div className="flex items-center space-x-2">
                             <Badge variant="secondary" className="text-xs">
-                              {suggestion.type}
+                              {suggestion.suggestion_type.replace('_', ' ')}
                             </Badge>
-                            {suggestion.count && (
+                            {suggestion.usage_count && (
                               <span className="text-xs text-secondary-text">
-                                {suggestion.count}
+                                {suggestion.usage_count}
                               </span>
                             )}
                           </div>

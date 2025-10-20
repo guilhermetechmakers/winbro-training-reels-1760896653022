@@ -104,6 +104,16 @@ export default function App() {
               } 
             />
             <Route 
+              path="/content-library" 
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <ContentLibrary />
+                  </MainLayout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
               path="/video/:id" 
               element={
                 <ProtectedRoute>

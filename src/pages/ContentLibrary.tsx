@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 // import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +25,7 @@ import type { SearchSuggestion } from '@/types/search';
 
 export default function ContentLibrary() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -105,6 +106,15 @@ export default function ContentLibrary() {
     resetFilters();
     handleSearch();
   }, [resetFilters, handleSearch]);
+
+  // Initialize search with URL query
+  useEffect(() => {
+    const urlQuery = searchParams.get('q');
+    if (urlQuery && urlQuery !== searchState.query) {
+      setQuery(urlQuery);
+      search({ query: urlQuery });
+    }
+  }, [searchParams, searchState.query, setQuery, search]);
 
   // Auto-search when filters change
   useEffect(() => {
