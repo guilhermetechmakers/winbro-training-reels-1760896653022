@@ -3,6 +3,8 @@ import { motion } from 'motion/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   Play, 
   Users, 
@@ -24,7 +26,12 @@ import {
   Youtube,
   Shield,
   Clock,
-  TrendingUp
+  TrendingUp,
+  Sparkles,
+  Target,
+  BarChart3,
+  Globe,
+  ExternalLink
 } from 'lucide-react';
 
 export default function LandingPage() {
@@ -32,10 +39,12 @@ export default function LandingPage() {
     name: '',
     company: '',
     email: '',
-    machines: ''
+    machines: '',
+    message: ''
   });
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -45,32 +54,56 @@ export default function LandingPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleDemoSubmit = (e: React.FormEvent) => {
+  const handleDemoSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle demo request submission
-    console.log('Demo request:', demoForm);
+    setIsSubmitting(true);
     
-    // Show success message with better UX
-    const successMessage = document.createElement('div');
-    successMessage.className = 'fixed top-4 right-4 bg-status-green text-white px-6 py-4 rounded-lg shadow-lg z-50 flex items-center space-x-2';
-    successMessage.innerHTML = `
-      <CheckCircle className="h-5 w-5" />
-      <span>Thank you for your interest! We'll contact you within 24 hours.</span>
-    `;
-    document.body.appendChild(successMessage);
-    
-    // Remove success message after 5 seconds
-    setTimeout(() => {
-      successMessage.remove();
-    }, 5000);
-    
-    // Reset form
-    setDemoForm({
-      name: '',
-      company: '',
-      email: '',
-      machines: ''
-    });
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Handle demo request submission
+      console.log('Demo request:', demoForm);
+      
+      // Show success message with better UX
+      const successMessage = document.createElement('div');
+      successMessage.className = 'fixed top-4 right-4 bg-status-green text-white px-6 py-4 rounded-lg shadow-lg z-50 flex items-center space-x-2 animate-fade-in-up';
+      successMessage.innerHTML = `
+        <CheckCircle className="h-5 w-5" />
+        <span>Thank you for your interest! We'll contact you within 24 hours.</span>
+      `;
+      document.body.appendChild(successMessage);
+      
+      // Remove success message after 5 seconds
+      setTimeout(() => {
+        successMessage.remove();
+      }, 5000);
+      
+      // Reset form
+      setDemoForm({
+        name: '',
+        company: '',
+        email: '',
+        machines: '',
+        message: ''
+      });
+    } catch (error) {
+      console.error('Error submitting demo request:', error);
+      // Show error message
+      const errorMessage = document.createElement('div');
+      errorMessage.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg z-50 flex items-center space-x-2 animate-fade-in-up';
+      errorMessage.innerHTML = `
+        <X className="h-5 w-5" />
+        <span>Something went wrong. Please try again.</span>
+      `;
+      document.body.appendChild(errorMessage);
+      
+      setTimeout(() => {
+        errorMessage.remove();
+      }, 5000);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const features = [
@@ -81,7 +114,8 @@ export default function LandingPage() {
       benefits: ["Quick capture", "Mobile-friendly", "HD quality"],
       gradient: "from-blue-500 to-blue-600",
       stats: "20-30s videos",
-      color: "blue"
+      color: "blue",
+      highlight: "Most Popular"
     },
     {
       icon: <Search className="h-8 w-8 text-accent-blue" />,
@@ -90,7 +124,8 @@ export default function LandingPage() {
       benefits: ["Voice search", "Smart filters", "Instant results"],
       gradient: "from-purple-500 to-purple-600",
       stats: "99% accuracy",
-      color: "purple"
+      color: "purple",
+      highlight: "AI-Powered"
     },
     {
       icon: <BookOpen className="h-8 w-8 text-accent-blue" />,
@@ -99,7 +134,8 @@ export default function LandingPage() {
       benefits: ["Drag & drop", "Custom paths", "Progress tracking"],
       gradient: "from-green-500 to-green-600",
       stats: "Unlimited courses",
-      color: "green"
+      color: "green",
+      highlight: "Advanced"
     },
     {
       icon: <Award className="h-8 w-8 text-accent-blue" />,
@@ -108,7 +144,8 @@ export default function LandingPage() {
       benefits: ["Auto-grading", "Digital certificates", "Compliance ready"],
       gradient: "from-orange-500 to-orange-600",
       stats: "Auto-generated",
-      color: "orange"
+      color: "orange",
+      highlight: "Compliance"
     }
   ];
 
@@ -398,42 +435,73 @@ export default function LandingPage() {
             </div>
             
             {/* Enhanced headline with better typography hierarchy */}
-            <h1 id="hero-heading" className="text-5xl lg:text-7xl xl:text-8xl font-bold mb-8 animate-fade-in-up leading-tight" style={{ animationDelay: '0.1s' }}>
+            <motion.h1 
+              id="hero-heading" 
+              className="text-5xl lg:text-7xl xl:text-8xl font-bold mb-8 leading-tight"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.1 }}
+            >
               Transform Machine Training with
-              <span className="hero-text-gradient block mt-2 bg-gradient-to-r from-accent-blue via-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <motion.span 
+                className="hero-text-gradient block mt-2 bg-gradient-to-r from-accent-blue via-blue-600 to-purple-600 bg-clip-text text-transparent"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.8, delay: 0.3 }}
+              >
                 Ultra-Short Video Reels
-              </span>
-            </h1>
+              </motion.span>
+            </motion.h1>
             
             {/* Enhanced subheadline with better readability */}
-            <p className="text-xl lg:text-2xl xl:text-3xl text-secondary-text mb-12 max-w-5xl mx-auto leading-relaxed animate-fade-in-up font-light" style={{ animationDelay: '0.2s' }}>
+            <motion.p 
+              className="text-xl lg:text-2xl xl:text-3xl text-secondary-text mb-12 max-w-5xl mx-auto leading-relaxed font-light"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+            >
               Capture, organize, and deliver 20-30 second instructional videos that document machine operations, 
               maintenance, and troubleshooting techniques for your entire team.
-            </p>
+            </motion.p>
             
             {/* Enhanced CTA buttons with better micro-interactions */}
-            <div className="flex flex-col sm:flex-row gap-6 justify-center mb-16 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
-              <Button 
-                size="lg" 
-                className="btn-primary text-xl px-12 py-6 group relative overflow-hidden" 
-                aria-label="Request a demo of Winbro Training Reels"
+            <motion.div 
+              className="flex flex-col sm:flex-row gap-6 justify-center mb-16"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.3 }}
+            >
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
-                <span className="relative z-10 flex items-center">
-                  Request Demo
-                  <ArrowRight className="ml-3 h-6 w-6 group-hover:translate-x-1 transition-transform duration-300" />
-                </span>
-                <div className="absolute inset-0 bg-gradient-to-r from-accent-blue to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              </Button>
-              <Button 
-                size="lg" 
-                variant="outline" 
-                className="btn-secondary text-xl px-12 py-6 group hover:shadow-xl hover:shadow-accent-blue/25" 
-                aria-label="Watch the product demo video"
+                <Button 
+                  size="lg" 
+                  className="btn-primary text-xl px-12 py-6 group relative overflow-hidden" 
+                  aria-label="Request a demo of Winbro Training Reels"
+                >
+                  <span className="relative z-10 flex items-center">
+                    Request Demo
+                    <ArrowRight className="ml-3 h-6 w-6 group-hover:translate-x-1 transition-transform duration-300" />
+                  </span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-accent-blue to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                </Button>
+              </motion.div>
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
-                <Play className="mr-3 h-6 w-6 group-hover:scale-110 transition-transform duration-300" />
-                Watch Demo Video
-              </Button>
-            </div>
+                <Button 
+                  size="lg" 
+                  variant="outline" 
+                  className="btn-secondary text-xl px-12 py-6 group hover:shadow-xl hover:shadow-accent-blue/25" 
+                  aria-label="Watch the product demo video"
+                >
+                  <Play className="mr-3 h-6 w-6 group-hover:scale-110 transition-transform duration-300" />
+                  Watch Demo Video
+                </Button>
+              </motion.div>
+            </motion.div>
 
             {/* Enhanced Hero Video with better visual design */}
             <div className="relative max-w-5xl mx-auto animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
@@ -662,19 +730,339 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Customer Logos Section */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white border-y">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
-            <p className="text-secondary-text text-lg">Trusted by industry leaders</p>
+      {/* Statistics Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-accent-blue to-blue-600 relative overflow-hidden">
+        {/* Background decoration */}
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="absolute top-0 left-0 w-full h-full">
+          <motion.div 
+            className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"
+            animate={{ 
+              scale: [1, 1.2, 1],
+              opacity: [0.3, 0.6, 0.3]
+            }}
+            transition={{ 
+              duration: 4,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          />
+          <motion.div 
+            className="absolute bottom-10 right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"
+            animate={{ 
+              scale: [1, 0.8, 1],
+              opacity: [0.2, 0.5, 0.2]
+            }}
+            transition={{ 
+              duration: 5,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: 1
+            }}
+          />
+        </div>
+        
+        <div className="relative max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <motion.h2 
+              className="text-4xl lg:text-5xl font-bold text-white mb-6"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8 }}
+              viewport={{ once: true }}
+            >
+              Trusted by Industry Leaders
+            </motion.h2>
+            <motion.p 
+              className="text-xl text-blue-100 max-w-3xl mx-auto"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              viewport={{ once: true }}
+            >
+              Join hundreds of manufacturing companies already transforming their training processes
+            </motion.p>
           </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-16">
+            {[
+              { number: "500+", label: "Companies", icon: <Globe className="h-8 w-8" /> },
+              { number: "50K+", label: "Videos", icon: <Video className="h-8 w-8" /> },
+              { number: "70%", label: "Time Saved", icon: <Clock className="h-8 w-8" /> },
+              { number: "99%", label: "Accuracy", icon: <Target className="h-8 w-8" /> }
+            ].map((stat, index) => (
+              <motion.div
+                key={index}
+                className="text-center group"
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
+                viewport={{ once: true }}
+              >
+                <motion.div 
+                  className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:bg-white/30 transition-colors duration-300"
+                  whileHover={{ scale: 1.1, rotate: 5 }}
+                >
+                  {stat.icon}
+                </motion.div>
+                <div className="text-4xl lg:text-5xl font-bold text-white mb-2">{stat.number}</div>
+                <div className="text-blue-100 text-lg">{stat.label}</div>
+              </motion.div>
+            ))}
+          </div>
+          
+          {/* Customer Logos */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 items-center">
             {customerLogos.map((logo, index) => (
-              <div key={index} className="text-center group">
-                <div className="h-12 bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-gray-200 transition-colors duration-300">
-                  <span className="text-gray-600 font-semibold text-sm">{logo}</span>
+              <motion.div 
+                key={index} 
+                className="text-center group"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                viewport={{ once: true }}
+              >
+                <div className="h-12 bg-white/10 backdrop-blur-sm rounded-lg flex items-center justify-center group-hover:bg-white/20 transition-colors duration-300">
+                  <span className="text-white/80 font-semibold text-sm">{logo}</span>
                 </div>
-              </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Benefits Section */}
+      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-white relative overflow-hidden" aria-labelledby="benefits-heading">
+        {/* Background decoration */}
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-50/50 via-blue-50/30 to-purple-50/30"></div>
+        
+        <div className="relative max-w-7xl mx-auto">
+          <div className="text-center mb-20">
+            <div className="inline-flex items-center px-6 py-3 rounded-full bg-gradient-to-r from-accent-blue/10 to-blue-600/10 text-accent-blue text-sm font-semibold mb-6 border border-accent-blue/20">
+              <BarChart3 className="h-4 w-4 mr-2" />
+              Proven Results
+            </div>
+            <h2 id="benefits-heading" className="text-4xl lg:text-5xl xl:text-6xl font-bold text-primary-text mb-6">
+              Why Choose Winbro Training Reels?
+            </h2>
+            <p className="text-xl lg:text-2xl text-secondary-text max-w-4xl mx-auto leading-relaxed">
+              Transform your training process with measurable results and immediate impact
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[
+              {
+                icon: <Clock className="h-12 w-12 text-accent-blue" />,
+                title: "70% Faster Training",
+                description: "Reduce training time from hours to minutes with focused, bite-sized content that employees can access instantly.",
+                metric: "70%",
+                metricLabel: "Time Saved",
+                color: "from-green-500 to-green-600"
+              },
+              {
+                icon: <Target className="h-12 w-12 text-accent-blue" />,
+                title: "99% Accuracy Rate",
+                description: "AI-powered search and transcription ensure your team finds exactly what they need, when they need it.",
+                metric: "99%",
+                metricLabel: "Accuracy",
+                color: "from-blue-500 to-blue-600"
+              },
+              {
+                icon: <TrendingUp className="h-12 w-12 text-accent-blue" />,
+                title: "95% Compliance",
+                description: "Track and verify training completion with automated certificates and progress monitoring.",
+                metric: "95%",
+                metricLabel: "Compliance",
+                color: "from-purple-500 to-purple-600"
+              },
+              {
+                icon: <Users className="h-12 w-12 text-accent-blue" />,
+                title: "Unlimited Scalability",
+                description: "From small teams to enterprise organizations, scale your training program as you grow.",
+                metric: "∞",
+                metricLabel: "Scalability",
+                color: "from-orange-500 to-orange-600"
+              },
+              {
+                icon: <Shield className="h-12 w-12 text-accent-blue" />,
+                title: "Enterprise Security",
+                description: "Bank-level security with SSO, encryption, and compliance with industry standards.",
+                metric: "100%",
+                metricLabel: "Secure",
+                color: "from-red-500 to-red-600"
+              },
+              {
+                icon: <Sparkles className="h-12 w-12 text-accent-blue" />,
+                title: "Easy Implementation",
+                description: "Get started in minutes with our intuitive interface and comprehensive onboarding process.",
+                metric: "5min",
+                metricLabel: "Setup Time",
+                color: "from-pink-500 to-pink-600"
+              }
+            ].map((benefit, index) => (
+              <motion.div
+                key={index}
+                className="group"
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
+                viewport={{ once: true }}
+              >
+                <Card className="benefit-card group hover:shadow-2xl hover:shadow-accent-blue/10 transition-all duration-500 hover:-translate-y-2 relative overflow-hidden h-full">
+                  {/* Gradient overlay */}
+                  <div className={`absolute inset-0 bg-gradient-to-br ${benefit.color} opacity-0 group-hover:opacity-5 transition-opacity duration-500`}></div>
+                  
+                  <CardContent className="p-8 relative z-10">
+                    {/* Icon with enhanced design */}
+                    <motion.div 
+                      className="w-16 h-16 bg-accent-blue/10 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500"
+                      whileHover={{ scale: 1.1, rotate: 3 }}
+                    >
+                      {benefit.icon}
+                    </motion.div>
+                    
+                    {/* Metric badge */}
+                    <motion.div 
+                      className={`absolute top-4 right-4 bg-gradient-to-r ${benefit.color} text-white text-xs font-bold px-3 py-1 rounded-full`}
+                      whileHover={{ scale: 1.05 }}
+                    >
+                      {benefit.metric}
+                    </motion.div>
+                    
+                    <h3 className="text-2xl font-bold text-primary-text mb-4 group-hover:text-accent-blue transition-colors duration-300 text-center">
+                      {benefit.title}
+                    </h3>
+                    
+                    <p className="text-secondary-text text-lg leading-relaxed mb-6 text-center">
+                      {benefit.description}
+                    </p>
+                    
+                    {/* Metric display */}
+                    <div className="text-center">
+                      <div className="text-3xl font-bold text-accent-blue mb-1">{benefit.metric}</div>
+                      <div className="text-sm text-secondary-text">{benefit.metricLabel}</div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Case Studies Section */}
+      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-white relative overflow-hidden" aria-labelledby="case-studies-heading">
+        {/* Background decoration */}
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-50/50 via-blue-50/30 to-purple-50/30"></div>
+        
+        <div className="relative max-w-7xl mx-auto">
+          <div className="text-center mb-20">
+            <div className="inline-flex items-center px-6 py-3 rounded-full bg-gradient-to-r from-accent-blue/10 to-blue-600/10 text-accent-blue text-sm font-semibold mb-6 border border-accent-blue/20">
+              <BarChart3 className="h-4 w-4 mr-2" />
+              Success Stories
+            </div>
+            <h2 id="case-studies-heading" className="text-4xl lg:text-5xl xl:text-6xl font-bold text-primary-text mb-6">
+              Real Results from Real Companies
+            </h2>
+            <p className="text-xl lg:text-2xl text-secondary-text max-w-3xl mx-auto leading-relaxed">
+              See how leading manufacturers are transforming their training processes
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            {[
+              {
+                company: "Manufacturing Corp",
+                industry: "Automotive Parts",
+                employees: "2,500+",
+                challenge: "Reducing training time for new machine operators while maintaining safety standards",
+                solution: "Implemented Winbro Training Reels for all CNC machine operations and maintenance procedures",
+                results: [
+                  "70% reduction in training time",
+                  "95% safety compliance rate",
+                  "50% faster onboarding",
+                  "$2M annual savings"
+                ],
+                logo: "MC",
+                color: "from-blue-500 to-blue-600"
+              },
+              {
+                company: "Precision Manufacturing",
+                industry: "Aerospace Components",
+                employees: "1,200+",
+                challenge: "Knowledge retention and cross-training across multiple production lines",
+                solution: "Created comprehensive video library with AI-powered search and course builder",
+                results: [
+                  "80% knowledge retention",
+                  "60% faster cross-training",
+                  "99% search accuracy",
+                  "40% reduction in errors"
+                ],
+                logo: "PM",
+                color: "from-purple-500 to-purple-600"
+              }
+            ].map((caseStudy, index) => (
+              <motion.div
+                key={index}
+                className="group"
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: index * 0.2 }}
+                viewport={{ once: true }}
+              >
+                <Card className="case-study-card group hover:shadow-2xl hover:shadow-accent-blue/10 transition-all duration-500 hover:-translate-y-2 relative overflow-hidden h-full">
+                  {/* Gradient overlay */}
+                  <div className={`absolute inset-0 bg-gradient-to-br ${caseStudy.color} opacity-0 group-hover:opacity-5 transition-opacity duration-500`}></div>
+                  
+                  <CardContent className="p-8 relative z-10">
+                    {/* Company header */}
+                    <div className="flex items-center mb-6">
+                      <motion.div 
+                        className={`w-16 h-16 bg-gradient-to-br ${caseStudy.color} text-white rounded-2xl flex items-center justify-center font-bold text-xl mr-4 group-hover:scale-110 transition-transform duration-300`}
+                        whileHover={{ scale: 1.1 }}
+                      >
+                        {caseStudy.logo}
+                      </motion.div>
+                      <div>
+                        <h3 className="text-2xl font-bold text-primary-text group-hover:text-accent-blue transition-colors duration-300">
+                          {caseStudy.company}
+                        </h3>
+                        <p className="text-secondary-text">{caseStudy.industry} • {caseStudy.employees} employees</p>
+                      </div>
+                    </div>
+                    
+                    {/* Challenge */}
+                    <div className="mb-6">
+                      <h4 className="text-lg font-semibold text-primary-text mb-2">Challenge</h4>
+                      <p className="text-secondary-text leading-relaxed">{caseStudy.challenge}</p>
+                    </div>
+                    
+                    {/* Solution */}
+                    <div className="mb-6">
+                      <h4 className="text-lg font-semibold text-primary-text mb-2">Solution</h4>
+                      <p className="text-secondary-text leading-relaxed">{caseStudy.solution}</p>
+                    </div>
+                    
+                    {/* Results */}
+                    <div>
+                      <h4 className="text-lg font-semibold text-primary-text mb-4">Results</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        {caseStudy.results.map((result, i) => (
+                          <motion.div 
+                            key={i}
+                            className="flex items-center p-3 bg-accent-blue/5 rounded-lg group-hover:bg-accent-blue/10 transition-colors duration-300"
+                            whileHover={{ scale: 1.02 }}
+                          >
+                            <CheckCircle className="h-5 w-5 text-status-green mr-3 flex-shrink-0" />
+                            <span className="text-sm font-medium text-primary-text">{result}</span>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
             ))}
           </div>
         </div>
@@ -768,6 +1156,80 @@ export default function LandingPage() {
                 </Card>
               </motion.div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Integrations Section */}
+      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-white relative overflow-hidden" aria-labelledby="integrations-heading">
+        {/* Background decoration */}
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-50/50 via-blue-50/30 to-purple-50/30"></div>
+        
+        <div className="relative max-w-7xl mx-auto">
+          <div className="text-center mb-20">
+            <div className="inline-flex items-center px-6 py-3 rounded-full bg-gradient-to-r from-accent-blue/10 to-blue-600/10 text-accent-blue text-sm font-semibold mb-6 border border-accent-blue/20">
+              <Globe className="h-4 w-4 mr-2" />
+              Seamless Integration
+            </div>
+            <h2 id="integrations-heading" className="text-4xl lg:text-5xl xl:text-6xl font-bold text-primary-text mb-6">
+              Works with Your Existing Tools
+            </h2>
+            <p className="text-xl lg:text-2xl text-secondary-text max-w-3xl mx-auto leading-relaxed">
+              Integrate seamlessly with your current systems and workflows
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">
+            {[
+              { name: "Microsoft Teams", icon: "MS", color: "from-blue-500 to-blue-600" },
+              { name: "Slack", icon: "SL", color: "from-purple-500 to-purple-600" },
+              { name: "SAP", icon: "SAP", color: "from-orange-500 to-orange-600" },
+              { name: "Oracle", icon: "OR", color: "from-red-500 to-red-600" },
+              { name: "Salesforce", icon: "SF", color: "from-green-500 to-green-600" },
+              { name: "Workday", icon: "WD", color: "from-pink-500 to-pink-600" },
+              { name: "ServiceNow", icon: "SN", color: "from-indigo-500 to-indigo-600" },
+              { name: "Jira", icon: "JI", color: "from-blue-400 to-blue-500" },
+              { name: "Confluence", icon: "CF", color: "from-blue-600 to-blue-700" },
+              { name: "SharePoint", icon: "SP", color: "from-blue-700 to-blue-800" },
+              { name: "Google Workspace", icon: "GW", color: "from-green-400 to-green-500" },
+              { name: "Zoom", icon: "ZM", color: "from-blue-500 to-blue-600" }
+            ].map((integration, index) => (
+              <motion.div
+                key={index}
+                className="group text-center"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                viewport={{ once: true }}
+              >
+                <motion.div 
+                  className={`w-20 h-20 bg-gradient-to-br ${integration.color} text-white rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg`}
+                  whileHover={{ scale: 1.1, rotate: 3 }}
+                >
+                  <span className="font-bold text-lg">{integration.icon}</span>
+                </motion.div>
+                <h3 className="text-sm font-semibold text-primary-text group-hover:text-accent-blue transition-colors duration-300">
+                  {integration.name}
+                </h3>
+              </motion.div>
+            ))}
+          </div>
+          
+          <div className="text-center mt-16">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              viewport={{ once: true }}
+            >
+              <p className="text-lg text-secondary-text mb-6">
+                Don't see your tool? We're constantly adding new integrations.
+              </p>
+              <Button variant="outline" className="btn-secondary">
+                Request Integration
+                <ExternalLink className="ml-2 h-4 w-4" />
+              </Button>
+            </motion.div>
           </div>
         </div>
       </section>
@@ -871,6 +1333,87 @@ export default function LandingPage() {
                   </CardContent>
                   </Card>
                 </motion.div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-main-bg relative overflow-hidden" aria-labelledby="faq-heading">
+        {/* Background decoration */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/20 via-purple-50/10 to-indigo-50/20"></div>
+        
+        <div className="relative max-w-4xl mx-auto">
+          <div className="text-center mb-20">
+            <div className="inline-flex items-center px-6 py-3 rounded-full bg-gradient-to-r from-accent-blue/10 to-blue-600/10 text-accent-blue text-sm font-semibold mb-6 border border-accent-blue/20">
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Common Questions
+            </div>
+            <h2 id="faq-heading" className="text-4xl lg:text-5xl xl:text-6xl font-bold text-primary-text mb-6">
+              Frequently Asked Questions
+            </h2>
+            <p className="text-xl lg:text-2xl text-secondary-text max-w-3xl mx-auto leading-relaxed">
+              Everything you need to know about Winbro Training Reels
+            </p>
+          </div>
+          
+          <div className="space-y-6">
+            {[
+              {
+                question: "How long does it take to set up Winbro Training Reels?",
+                answer: "Setup takes just 5 minutes! Simply create your account, invite your team, and start uploading videos. Our intuitive interface makes it easy to get started immediately."
+              },
+              {
+                question: "Can I use this with my existing training materials?",
+                answer: "Absolutely! You can upload your existing videos, documents, and training materials. Our platform integrates seamlessly with your current workflow and enhances it with AI-powered search and organization."
+              },
+              {
+                question: "Is my data secure and private?",
+                answer: "Yes, security is our top priority. We use enterprise-grade encryption, SSO integration, and comply with industry standards. Your data is never shared with third parties and is protected with bank-level security."
+              },
+              {
+                question: "How does the AI search work?",
+                answer: "Our AI automatically transcribes your videos and creates searchable metadata. You can search by keywords, machine models, processes, or even spoken content. The AI learns from your content to provide increasingly accurate results."
+              },
+              {
+                question: "Can I create custom training courses?",
+                answer: "Yes! Our course builder lets you combine videos, add quizzes, create learning paths, and track progress. You can build unlimited courses tailored to your specific training needs."
+              },
+              {
+                question: "What if I need help or support?",
+                answer: "We provide comprehensive support including documentation, video tutorials, and dedicated customer success managers. Our support team is available to help you get the most out of the platform."
+              }
+            ].map((faq, index) => (
+              <motion.div
+                key={index}
+                className="group"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                viewport={{ once: true }}
+              >
+                <Card className="faq-card group hover:shadow-lg transition-all duration-300">
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-primary-text mb-3 group-hover:text-accent-blue transition-colors duration-300">
+                          {faq.question}
+                        </h3>
+                        <p className="text-secondary-text leading-relaxed">
+                          {faq.answer}
+                        </p>
+                      </div>
+                      <motion.div
+                        className="ml-4 flex-shrink-0"
+                        whileHover={{ rotate: 90 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <ChevronRight className="h-5 w-5 text-accent-blue" />
+                      </motion.div>
+                    </div>
+                  </CardContent>
+                </Card>
               </motion.div>
             ))}
           </div>
@@ -1020,7 +1563,7 @@ export default function LandingPage() {
                     transition={{ duration: 0.5, delay: 0.9 }}
                     viewport={{ once: true }}
                   >
-                    <label htmlFor="demo-machines" className="form-label text-left">Machines Owned (Optional)</label>
+                    <Label htmlFor="demo-machines" className="form-label text-left">Machines Owned (Optional)</Label>
                     <Input
                       id="demo-machines"
                       className="form-input text-lg py-4"
@@ -1030,6 +1573,24 @@ export default function LandingPage() {
                       aria-describedby="demo-machines-help"
                     />
                     <div id="demo-machines-help" className="sr-only">Optional: List the types of machines your company owns</div>
+                  </motion.div>
+                  
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 1.0 }}
+                    viewport={{ once: true }}
+                  >
+                    <Label htmlFor="demo-message" className="form-label text-left">Additional Information (Optional)</Label>
+                    <Textarea
+                      id="demo-message"
+                      className="form-input text-lg py-4 min-h-[120px] resize-none"
+                      placeholder="Tell us about your training needs, team size, or specific requirements..."
+                      value={demoForm.message}
+                      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDemoForm({...demoForm, message: e.target.value})}
+                      aria-describedby="demo-message-help"
+                    />
+                    <div id="demo-message-help" className="sr-only">Optional: Share any additional information about your training needs</div>
                   </motion.div>
                   
                   {/* Trust indicators */}
@@ -1068,10 +1629,24 @@ export default function LandingPage() {
                         type="submit" 
                         className="w-full btn-primary text-xl py-6 group relative overflow-hidden" 
                         aria-label="Submit demo request form"
+                        disabled={isSubmitting}
                       >
                         <span className="relative z-10 flex items-center justify-center">
-                          Request Demo
-                          <ArrowRight className="ml-3 h-6 w-6 group-hover:translate-x-1 transition-transform duration-300" />
+                          {isSubmitting ? (
+                            <>
+                              <motion.div
+                                className="w-5 h-5 border-2 border-white border-t-transparent rounded-full mr-3"
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                              />
+                              Submitting...
+                            </>
+                          ) : (
+                            <>
+                              Request Demo
+                              <ArrowRight className="ml-3 h-6 w-6 group-hover:translate-x-1 transition-transform duration-300" />
+                            </>
+                          )}
                         </span>
                         <div className="absolute inset-0 bg-gradient-to-r from-accent-blue to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                       </Button>
@@ -1149,9 +1724,11 @@ export default function LandingPage() {
                   { href: "#features", text: "Features" },
                   { href: "#pricing", text: "Pricing" },
                   { href: "#how-it-works", text: "How It Works" },
-                  { href: "#", text: "API" },
+                  { href: "#testimonials", text: "Testimonials" },
+                  { href: "#", text: "API Documentation" },
                   { href: "#", text: "Integrations" },
-                  { href: "#", text: "Security" }
+                  { href: "#", text: "Security & Compliance" },
+                  { href: "#", text: "System Status" }
                 ].map((link, index) => (
                   <motion.li 
                     key={index}
@@ -1177,11 +1754,13 @@ export default function LandingPage() {
               <ul className="space-y-4 text-secondary-text">
                 {[
                   { href: "#", text: "About Us" },
-                  { href: "#", text: "Contact" },
+                  { href: "#", text: "Contact Sales" },
                   { href: "#", text: "Careers" },
-                  { href: "#", text: "Blog" },
-                  { href: "#", text: "Press" },
-                  { href: "#", text: "Partners" }
+                  { href: "#", text: "Blog & News" },
+                  { href: "#", text: "Press Kit" },
+                  { href: "#", text: "Partners" },
+                  { href: "#", text: "Investor Relations" },
+                  { href: "#", text: "Leadership" }
                 ].map((link, index) => (
                   <motion.li 
                     key={index}
@@ -1208,10 +1787,12 @@ export default function LandingPage() {
                 {[
                   { href: "/help", text: "Help Center" },
                   { href: "#", text: "Documentation" },
+                  { href: "#", text: "Video Tutorials" },
                   { href: "#", text: "System Status" },
-                  { href: "#", text: "Community" },
-                  { href: "#", text: "Training" },
-                  { href: "#", text: "Contact Support" }
+                  { href: "#", text: "Community Forum" },
+                  { href: "#", text: "Training Resources" },
+                  { href: "#", text: "Contact Support" },
+                  { href: "#", text: "Feature Requests" }
                 ].map((link, index) => (
                   <motion.li 
                     key={index}
