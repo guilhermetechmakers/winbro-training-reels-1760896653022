@@ -1,0 +1,20 @@
+{
+  "migration_name": "20241221130000_create_billing_tables",
+  "created_at": "2024-12-21T13:00:00Z",
+  "description": "Create comprehensive billing and subscription management system with organizations, plans, subscriptions, invoices, payments, and billing events",
+  "tables_created": [
+    "organizations",
+    "user_organizations", 
+    "subscription_plans",
+    "subscriptions",
+    "invoices",
+    "payments",
+    "billing_events"
+  ],
+  "tables_modified": [],
+  "tables_deleted": [],
+  "breaking_changes": false,
+  "rollback_sql": "DROP TABLE IF EXISTS billing_events CASCADE; DROP TABLE IF EXISTS payments CASCADE; DROP TABLE IF EXISTS invoices CASCADE; DROP TABLE IF EXISTS subscriptions CASCADE; DROP TABLE IF EXISTS subscription_plans CASCADE; DROP TABLE IF EXISTS user_organizations CASCADE; DROP TABLE IF EXISTS organizations CASCADE; DROP FUNCTION IF EXISTS generate_invoice_number(); DROP FUNCTION IF EXISTS calculate_subscription_usage(UUID); DROP FUNCTION IF EXISTS set_invoice_number();",
+  "estimated_rows": 0,
+  "requires_downtime": false
+}

@@ -1,8 +1,9 @@
 import React from 'react';
 
 interface TabsProps {
-  value: string;
-  onValueChange: (value: string) => void;
+  value?: string;
+  defaultValue?: string;
+  onValueChange?: (value: string) => void;
   className?: string;
   children: React.ReactNode;
 }
@@ -24,12 +25,22 @@ interface TabsContentProps {
   className?: string;
 }
 
-export const Tabs = ({ value, onValueChange, className, children }: TabsProps) => {
+export const Tabs = ({ value, defaultValue, onValueChange, className, children }: TabsProps) => {
+  const [internalValue, setInternalValue] = React.useState(defaultValue || '');
+  const currentValue = value !== undefined ? value : internalValue;
+  
+  const handleValueChange = (newValue: string) => {
+    if (value === undefined) {
+      setInternalValue(newValue);
+    }
+    onValueChange?.(newValue);
+  };
+
   return (
     <div className={className}>
       {React.Children.map(children, child => {
         if (React.isValidElement(child)) {
-          return React.cloneElement(child, { value, onValueChange });
+          return React.cloneElement(child, { value: currentValue, onValueChange: handleValueChange });
         }
         return child;
       })}
